@@ -1,143 +1,142 @@
 /**
  * components/HeatmapViewer.jsx
- * Displays the base-64 encoded heatmap PNG returned by the backend.
+ * Interactive Plotly.js gene-expression heatmap (patient vs healthy baseline).
+ * Data comes from the feature_importances array returned by /predict.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef } from 'react';
+import Plotly from 'plotly.js-dist-min';
 
-export default function HeatmapViewer({ imageBase64, isLoading }) {
-  const [zoom, setZoom] = useState(false);
+// Fallback baseline values (healthy median log₂ expression)
+const REFERENCE_BASELINE = {
+  IL6: 2.1, TLR4: 4.5, 'HLA-DRA': 6.8, STAT3: 5.0, TNF: 2.4,
+  CXCL8: 2.8, CD14: 5.9, MMP8: 1.8, LBP: 4.1, PCSK9: 3.6,
+};
 
-  if (isLoading) {
-    return (
-      <div style={styles.placeholder}>
-        <div className="skeleton" style={{ width: '100%', height: '140px', borderRadius: '8px' }} />
-        <p style={styles.loadingText}>Generating heatmap…</p>
-      </div>
+/**
+ * HeatmapViewer
+ *
+ * Props:
+ *   featureImportances — array of { gene, impact, expression, baseline }
+ */
+export default function HeatmapViewer({ featureImportances }) {
+  const divRef = useRef(null);
+
+  useEffect(() => {
+    if (!divRef.current || !featureImportances?.length) return;
+
+    // Sort genes by absolute impact (highest first) for a meaningful x-axis
+    const sorted = [...featureImportances].sort(
+      (a, b) => Math.abs(b.impact ?? 0) - Math.abs(a.impact ?? 0)
     );
-  }
 
-  if (!imageBase64) {
+    const genes      = sorted.map(f => f.gene);
+    const patientRow = sorted.map(f => f.expression ?? 0);
+    const baseRow    = sorted.map(f => f.baseline ?? REFERENCE_BASELINE[f.gene] ?? 0);
+
+    const trace = {
+      type: 'heatmap',
+      x: genes,
+      y: ['Patient', 'Healthy Baseline'],
+      z: [patientRow, baseRow],
+      colorscale: [
+        [0.0,  '#1e40af'],
+        [0.25, '#3b82f6'],
+        [0.5,  '#fef9c3'],
+        [0.75, '#f97316'],
+        [1.0,  '#dc2626'],
+      ],
+      zmin: 0,
+      zmax: 12,
+      hovertemplate: '<b>%{x}</b><br>%{y}<br>log₂ expr: <b>%{z:.2f}</b><extra></extra>',
+      showscale: true,
+      colorbar: {
+        title: { text: 'log₂', side: 'right', font: { size: 11 } },
+        thickness: 14,
+        len: 0.85,
+        tickfont: { size: 10 },
+      },
+    };
+
+    const layout = {
+      height: 220,
+      margin: { t: 16, r: 80, b: 64, l: 130 },
+      paper_bgcolor: 'transparent',
+      plot_bgcolor: 'transparent',
+      font: { family: 'Inter, system-ui, sans-serif', size: 12, color: '#334155' },
+      xaxis: {
+        tickangle: -38,
+        tickfont: { size: 11, family: 'JetBrains Mono, monospace', color: '#1e3a5f' },
+        gridcolor: '#e2e8f0',
+        linecolor: '#e2e8f0',
+        title: { text: 'Gene Symbol', font: { size: 11, color: '#64748b' }, standoff: 16 },
+      },
+      yaxis: {
+        tickfont: { size: 11 },
+        gridcolor: '#e2e8f0',
+        linecolor: '#e2e8f0',
+      },
+    };
+
+    const config = {
+      responsive: true,
+      displayModeBar: true,
+      displaylogo: false,
+      modeBarButtonsToRemove: ['sendDataToCloud', 'editInChartStudio', 'lasso2d', 'select2d'],
+      toImageButtonOptions: {
+        format: 'png',
+        filename: 'SepsisAI_expression_heatmap',
+        scale: 2,
+      },
+    };
+
+    Plotly.newPlot(divRef.current, [trace], layout, config);
+
+    return () => {
+      if (divRef.current) Plotly.purge(divRef.current);
+    };
+  }, [featureImportances]);
+
+  if (!featureImportances?.length) {
     return (
-      <div style={styles.empty}>
-        <HeatmapIcon />
-        <p>Run a prediction to generate the expression heatmap.</p>
+      <div className="card" style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '3rem',
+        color: 'var(--color-text-muted)',
+        gap: '0.75rem',
+      }}>
+        <span style={{ fontSize: '2rem', opacity: 0.4 }}>▦</span>
+        <p style={{ fontSize: '0.85rem' }}>No heatmap data available.</p>
       </div>
     );
   }
 
   return (
-    <div style={styles.wrapper}>
-      <div style={styles.toolbar}>
-        <span style={styles.meta}>Patient vs Healthy Baseline · log₂ expression</span>
-        <button
-          type="button"
-          className="btn btn-ghost"
-          style={styles.zoomBtn}
-          onClick={() => setZoom(true)}
-          title="View full size"
-        >
-          ⊞ Expand
-        </button>
+    <div className="card fade-in" style={{ padding: 0, overflow: 'hidden' }}>
+      <div style={{
+        padding: '1.1rem 1.5rem 0.75rem',
+        borderBottom: '1px solid var(--color-border)',
+        display: 'flex',
+        alignItems: 'baseline',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '0.5rem',
+      }}>
+        <h3 className="card-title" style={{ marginBottom: 0 }}>
+          Expression Heatmap
+        </h3>
+        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
+          Patient vs Healthy Baseline · log₂ expression · sorted by impact
+        </span>
       </div>
-
-      <img
-        src={`data:image/png;base64,${imageBase64}`}
-        alt="Gene expression heatmap comparing patient to healthy baseline"
-        style={styles.img}
-        onClick={() => setZoom(true)}
-      />
-
-      {/* Zoom / lightbox overlay */}
-      {zoom && (
-        <div style={styles.overlay} onClick={() => setZoom(false)}>
-          <div style={styles.overlayInner} onClick={(e) => e.stopPropagation()}>
-            <button type="button" style={styles.closeBtn} onClick={() => setZoom(false)}>✕ Close</button>
-            <img
-              src={`data:image/png;base64,${imageBase64}`}
-              alt="Gene expression heatmap (full size)"
-              style={styles.imgFull}
-            />
-          </div>
-        </div>
-      )}
+      <div style={{ padding: '0.5rem 0.5rem 0' }}>
+        <div ref={divRef} style={{ width: '100%' }} />
+      </div>
     </div>
   );
 }
 
-const HeatmapIcon = () => (
-  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#334155" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
-    <rect x="14" y="14" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
-  </svg>
-);
 
-const styles = {
-  wrapper: { width: '100%' },
-  toolbar: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: '0.6rem',
-  },
-  meta: { fontSize: '0.75rem', color: '#64748b' },
-  zoomBtn: { fontSize: '0.75rem', padding: '0.25rem 0.65rem' },
-  img: {
-    width: '100%',
-    borderRadius: '8px',
-    border: '1px solid #1e293b',
-    cursor: 'zoom-in',
-    display: 'block',
-  },
-  placeholder: { display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' },
-  loadingText: { fontSize: '0.8rem', color: '#64748b', margin: 0 },
-  empty: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '0.6rem',
-    padding: '1.5rem',
-    color: '#475569',
-    fontSize: '0.85rem',
-    textAlign: 'center',
-    background: '#0f172a',
-    borderRadius: '8px',
-    border: '1px dashed #1e293b',
-  },
-  // Lightbox
-  overlay: {
-    position: 'fixed',
-    inset: 0,
-    background: 'rgba(0,0,0,0.85)',
-    zIndex: 1000,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '1.5rem',
-  },
-  overlayInner: {
-    position: 'relative',
-    maxWidth: '95vw',
-    maxHeight: '90vh',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.75rem',
-  },
-  closeBtn: {
-    alignSelf: 'flex-end',
-    background: 'rgba(239,68,68,0.2)',
-    border: '1px solid rgba(239,68,68,0.4)',
-    color: '#f87171',
-    borderRadius: '6px',
-    padding: '0.35rem 0.85rem',
-    cursor: 'pointer',
-    fontSize: '0.82rem',
-    fontFamily: 'Inter, sans-serif',
-  },
-  imgFull: {
-    maxWidth: '100%',
-    maxHeight: '80vh',
-    borderRadius: '8px',
-    objectFit: 'contain',
-  },
-};
