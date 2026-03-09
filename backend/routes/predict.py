@@ -14,10 +14,9 @@ one round-trip.
 import io
 import csv
 import logging
-from typing import Optional
 
 import pandas as pd
-from fastapi import APIRouter, File, UploadFile, HTTPException, Body
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, field_validator
 
@@ -120,21 +119,13 @@ async def download_template():
         "gene feature importances, and a base-64 heatmap PNG."
     ),
 )
-async def predict(
-    file: Optional[UploadFile] = File(
-        default=None,
-        description="CSV file (columns: Gene, Expression) uploaded as multipart/form-data.",
-    ),
-    payload: Optional[ManualInputPayload] = Body(default=None),
-):
+async def predict(request: Request):
     """
     Run sepsis risk prediction from gene expression data.
 
-    **Accepts (mutually exclusive):**
-    - A **CSV file** upload (`multipart/form-data`, field name `file`) with
-      columns `Gene` and `Expression`.
-    - A **JSON body** with a `genes` dictionary mapping gene symbols to
-      log₂ expression values.
+    **Accepts (mutually exclusive — detected via Content-Type):**
+    - `multipart/form-data` with a `file` field (CSV, columns: Gene · Expression).
+    - `application/json` body: ``{"genes": {"IL6": 8.2, ...}}``
 
     **Returns:**
     ```json
@@ -146,11 +137,19 @@ async def predict(
     }
     ```
     """
+    content_type = request.headers.get("content-type", "")
     gene_values: dict[str, float] = {}
 
-    if file is not None:
-        # ── CSV branch ──────────────────────────────────────────────────────
-        if not (file.filename or "").lower().endswith(".csv"):
+    if "multipart/form-data" in content_type:
+        # ── CSV file-upload branch ───────────────────────────────────────────
+        form = await request.form()
+        file = form.get("file")
+        if file is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Multipart form received but no 'file' field found.",
+            )
+        if not (getattr(file, "filename", "") or "").lower().endswith(".csv"):
             raise HTTPException(
                 status_code=400,
                 detail="Invalid file type.  Only .csv files are accepted.",
@@ -176,16 +175,31 @@ async def predict(
             zip(df["Gene"], pd.to_numeric(df["Expression"]).astype(float))
         )
 
-    elif payload is not None:
-        # ── JSON body branch ────────────────────────────────────────────────
+    elif "application/json" in content_type:
+        # ── JSON body branch ─────────────────────────────────────────────────
+        try:
+            body = await request.json()
+        except Exception as exc:
+            raise HTTPException(
+                status_code=400, detail=f"Failed to parse JSON body: {exc}"
+            ) from exc
+
+        try:
+            payload = ManualInputPayload(**body)
+        except Exception as exc:
+            raise HTTPException(
+                status_code=422, detail=f"Invalid payload: {exc}"
+            ) from exc
+
         gene_values = payload.genes
 
     else:
         raise HTTPException(
             status_code=400,
             detail=(
-                "No input provided.  Send either a CSV file upload "
-                "(multipart/form-data) or a JSON body with a 'genes' key."
+                "No input provided or unsupported Content-Type.  "
+                "Send a CSV file as multipart/form-data or a JSON body "
+                "(application/json) with a 'genes' key."
             ),
         )
 
@@ -206,4 +220,11 @@ async def predict(
         "feature_importances": feature_importances,
         "heatmap_base64": heatmap_b64,
         "genes": gene_values,
+        "model_info": {
+            "algorithm": "Weighted Linear Placeholder" if prediction.get("model_type") == "placeholder" else "Random Forest Classifier",
+            "genes_used": len(GENE_PANEL),
+            "dataset_source": "GEO Sepsis Dataset (GSE Cohorts)",
+            "explainability": "Mock SHAP-inspired scores" if prediction.get("model_type") == "placeholder" else "SHAP TreeExplainer",
+            "model_status": prediction.get("model_type", "placeholder"),
+        },
     }
