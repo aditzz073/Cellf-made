@@ -1,0 +1,4 @@
+# Trained model goes here.
+# Place your scikit-learn model file as:  models/sepsis_model.pkl
+# The model must implement:  predict_proba(X)  →  ndarray of shape (n, 2)
+# Until the file is present the application uses PlaceholderModel (see services/model_loader.py).
