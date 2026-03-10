@@ -120,7 +120,7 @@ export default function DataInput({ onSubmit, onBack, externalError, onClearErro
       </header>
 
       {/* ── Body ── */}
-      <div className="flex-1 max-w-5xl w-full mx-auto px-6 py-10">
+      <div className="flex-1 max-w-6xl w-full mx-auto px-6 py-10">
 
         {/* Page title */}
         <div className="mb-8">
@@ -211,6 +211,7 @@ export default function DataInput({ onSubmit, onBack, externalError, onClearErro
           <div className="flex flex-col items-center gap-3">
             <button
               type="submit"
+              disabled={!isReady}
               onClick={() => { if (externalError) onClearError?.(); }}
               className="w-full max-w-md inline-flex items-center justify-center gap-2 bg-navy-700 hover:bg-blue-800 text-white font-bold px-8 py-3.5 rounded-xl transition-all shadow-lg hover:shadow-xl text-base disabled:opacity-50 disabled:cursor-not-allowed"
             >

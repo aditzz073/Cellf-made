@@ -132,7 +132,7 @@ export default function LandingPage({ onStart }) {
             <div className="flex flex-wrap gap-3">
               <button
                 onClick={onStart}
-                className="inline-flex items-center gap-2 bg-navy-700 hover:bg-blue-800 text-white font-semibold px-7 py-3.5 rounded-lg transition-all shadow-lg hover:shadow-xl text-base"
+                className="inline-flex items-center gap-2 bg-navy-700 hover:bg-navy-800 text-white font-semibold px-7 py-3.5 rounded-lg transition-all shadow-lg hover:shadow-xl text-base"
               >
                 Begin Analysis
                 <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>

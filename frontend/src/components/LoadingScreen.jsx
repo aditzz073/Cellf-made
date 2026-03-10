@@ -12,13 +12,15 @@ const STEPS = [
 
 export default function LoadingScreen() {
   const [activeStep, setActiveStep] = useState(0);
+  const allDone = activeStep >= STEPS.length;
 
   useEffect(() => {
-    const id = setInterval(() => setActiveStep(s => Math.min(s + 1, STEPS.length)), 750);
+    if (allDone) return;
+    const id = setInterval(() => setActiveStep(s => s + 1), 750);
     return () => clearInterval(id);
-  }, []);
+  }, [allDone]);
 
-  const progress = Math.round((activeStep / STEPS.length) * 100);
+  const progress = allDone ? 95 : Math.round((activeStep / STEPS.length) * 100);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 font-sans">
@@ -99,6 +101,14 @@ export default function LoadingScreen() {
             );
           })}
         </div>
+
+        {/* Awaiting server response (after all steps complete) */}
+        {allDone && (
+          <div className="mt-2 flex items-center justify-center gap-3 bg-white rounded-xl border border-blue-200 px-4 py-3.5 shadow-sm animate-fade-in">
+            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+            <p className="text-sm font-medium text-navy-700">Awaiting server response…</p>
+          </div>
+        )}
 
         <p className="text-center text-xs text-slate-400 mt-6">
           Powered by SepsisAI · Research-grade sepsis risk prediction

@@ -109,18 +109,13 @@ export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
       <div className="flex-1 max-w-6xl w-full mx-auto px-6 py-8 space-y-5">
 
         {/* Page title row */}
-        <div className="flex items-baseline justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-navy-700">Sepsis Risk Assessment</h2>
-            <p className="text-sm text-slate-500 mt-1">
-              {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
-              &nbsp;·&nbsp;
-              {mode === 'clinical' ? 'Clinical overview' : 'Full research dashboard'}
-            </p>
-          </div>
-          <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${riskBadgeCls}`}>
-            {finalRiskLevel} Risk
-          </span>
+        <div>
+          <h2 className="text-xl font-bold text-navy-700">Sepsis Risk Assessment</h2>
+          <p className="text-sm text-slate-500 mt-1">
+            {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+            &nbsp;·&nbsp;
+            {mode === 'clinical' ? 'Clinical overview' : 'Full research dashboard'}
+          </p>
         </div>
 
         {/* ── Top row: Risk Card + Summary + Confidence ── */}
@@ -146,7 +141,7 @@ export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
                 {[
                   { label: 'Patient ID',       value: patientId,                                                mono: true },
                   { label: 'Risk Level',        value: finalRiskLevel,                                          color: finalRiskLevel === 'High' ? '#dc2626' : finalRiskLevel === 'Moderate' ? '#d97706' : '#16a34a' },
-                  { label: 'Risk Score',        value: `${(finalRiskScore * 100).toFixed(1)}%  (${finalRiskScore.toFixed(4)})`, mono: true },
+                  { label: 'Risk Score',        value: `${(finalRiskScore * 100).toFixed(1)}% (${finalRiskScore.toFixed(4)})`,  mono: true },
                   { label: 'Confidence',        value: finalConfidence != null ? `${Math.round(finalConfidence * 100)}%` : 'N/A', mono: true },
                   { label: 'Genes Analyzed',    value: `${feature_importances.length} / 10` },
                   { label: 'Model',             value: finalModelType },
@@ -162,9 +157,7 @@ export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
                   </div>
                 ))}
               </div>
-              <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-xs text-amber-700 leading-relaxed">
-                ⚠ For research use only. Not validated for clinical diagnosis or treatment decisions.
-              </div>
+
             </div>
 
             {/* Confidence indicator */}
