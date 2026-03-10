@@ -1,155 +1,98 @@
 import React from 'react';
 
 const RISK_META = {
-  High:     { color: 'var(--color-risk-high)',   bg: 'var(--color-risk-high-bg)', border: 'var(--color-risk-high-bd)', emoji: '🔴', barColor: '#dc2626' },
-  Moderate: { color: 'var(--color-risk-mod)',    bg: 'var(--color-risk-mod-bg)',  border: 'var(--color-risk-mod-bd)',  emoji: '🟡', barColor: '#d97706' },
-  Low:      { color: 'var(--color-risk-low)',    bg: 'var(--color-risk-low-bg)',  border: 'var(--color-risk-low-bd)',  emoji: '🟢', barColor: '#16a34a' },
+  High:     { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', badge: '#dc2626', dot: '🔴', label: 'HIGH RISK' },
+  Moderate: { color: '#d97706', bg: '#fffbeb', border: '#fed7aa', badge: '#d97706', dot: '🟡', label: 'MODERATE RISK' },
+  Low:      { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', badge: '#16a34a', dot: '🟢', label: 'LOW RISK' },
 };
 
 /**
- * RiskCard — displays the primary sepsis risk score prominently.
+ * RiskCard — primary sepsis risk score display.
  *
  * Props:
  *   riskScore   — 0–1 float
  *   riskLevel   — "High" | "Moderate" | "Low"
  *   confidence  — 0–1 float (optional)
- *   modelType   — string (optional, displayed as footnote)
+ *   modelType   — string (optional)
  */
 export default function RiskCard({ riskScore, riskLevel, confidence, modelType }) {
   const meta = RISK_META[riskLevel] ?? RISK_META.Moderate;
-  const pct = Math.round((riskScore ?? 0) * 100);
+  const pct  = Math.round((riskScore ?? 0) * 100);
   const confPct = confidence != null ? Math.round(confidence * 100) : null;
+  const isPlaceholder = (modelType || '').toLowerCase().includes('placeholder');
 
   return (
-    <div className="card fade-in" style={{
-      background: meta.bg,
-      border: `2px solid ${meta.border}`,
-      textAlign: 'center',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      {/* Background watermark */}
-      <div style={{
-        position: 'absolute',
-        right: '-12px',
-        bottom: '-12px',
-        fontSize: '7rem',
-        opacity: 0.08,
-        pointerEvents: 'none',
-        userSelect: 'none',
-        lineHeight: 1,
-      }}>
-        {meta.emoji}
+    <div
+      className="rounded-xl border-2 p-6 flex flex-col gap-4 relative overflow-hidden"
+      style={{ background: meta.bg, borderColor: meta.border }}
+    >
+      {/* Watermark */}
+      <div className="absolute -right-3 -bottom-3 text-9xl opacity-[0.06] pointer-events-none select-none leading-none">
+        {meta.dot}
       </div>
 
-      {/* Section label */}
-      <div className="card-title" style={{ justifyContent: 'center', color: meta.color }}>
+      {/* Label */}
+      <p className="text-[10px] font-bold tracking-widest uppercase text-center" style={{ color: meta.color }}>
         Sepsis Risk Score
+      </p>
+
+      {/* Big score */}
+      <div className="text-center">
+        <div className="text-7xl font-extrabold leading-none tabular-nums" style={{ color: meta.color }}>
+          {pct}<span className="text-3xl font-bold opacity-50">%</span>
+        </div>
+        <p className="text-xs font-mono mt-1.5 opacity-60" style={{ color: meta.color }}>
+          score: {(riskScore ?? 0).toFixed(4)}
+        </p>
       </div>
 
-      {/* Numeric score */}
-      <div style={{
-        fontSize: 'clamp(3.5rem, 8vw, 5rem)',
-        fontWeight: 800,
-        color: meta.color,
-        lineHeight: 1,
-        letterSpacing: '-0.03em',
-        marginBottom: '0.2rem',
-      }}>
-        {pct}<span style={{ fontSize: '2rem', fontWeight: 600, opacity: 0.7 }}>%</span>
-      </div>
-
-      <div style={{
-        fontSize: '0.75rem',
-        color: meta.color,
-        opacity: 0.65,
-        marginBottom: '1rem',
-        fontWeight: 500,
-        letterSpacing: '0.03em',
-      }}>
-        (score: {(riskScore ?? 0).toFixed(3)})
-      </div>
-
-      {/* Risk level badge */}
-      <div style={{ marginBottom: '1.25rem' }}>
-        <span className={`badge badge-${riskLevel.toLowerCase()}`} style={{ fontSize: '0.82rem', padding: '0.3em 0.9em' }}>
-          {meta.emoji} {riskLevel} Risk
+      {/* Risk badge */}
+      <div className="flex justify-center">
+        <span
+          className="px-5 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase text-white shadow-sm"
+          style={{ background: meta.badge }}
+        >
+          {meta.label}
         </span>
       </div>
 
-      {/* Progress bar */}
-      <div style={{ marginBottom: confPct != null ? '1.25rem' : '0' }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          fontSize: '0.75rem',
-          color: 'var(--color-text-muted)',
-          marginBottom: '0.35rem',
-        }}>
-          <span>Risk Level</span>
-          <span style={{ color: meta.color, fontWeight: 600 }}>{pct}%</span>
+      {/* Risk bar */}
+      <div>
+        <div className="flex justify-between text-xs mb-1.5 font-medium" style={{ color: meta.color }}>
+          <span className="opacity-60">Risk Level</span>
+          <span>{pct}%</span>
         </div>
-        <div className="progress-bar">
+        <div className="h-2.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.55)' }}>
           <div
-            className="progress-fill"
-            style={{
-              width: `${pct}%`,
-              background: `linear-gradient(90deg, ${meta.barColor}aa, ${meta.barColor})`,
-            }}
+            className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${meta.color}88, ${meta.color})` }}
           />
         </div>
       </div>
 
-      {/* Confidence */}
+      {/* Confidence section */}
       {confPct != null && (
-        <div style={{
-          background: 'rgba(255,255,255,0.6)',
-          border: '1px solid rgba(255,255,255,0.9)',
-          borderRadius: 'var(--radius-md)',
-          padding: '0.75rem 1rem',
-        }}>
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            fontSize: '0.8rem',
-            marginBottom: '0.3rem',
-          }}>
-            <span style={{ color: 'var(--color-text-muted)', fontWeight: 500 }}>Model Confidence</span>
-            <span style={{ color: 'var(--color-navy)', fontWeight: 700 }}>{confPct}%</span>
+        <div
+          className="rounded-xl p-4 flex flex-col gap-2"
+          style={{ background: 'rgba(255,255,255,0.75)', border: '1px solid rgba(255,255,255,0.9)' }}
+        >
+          <div className="flex justify-between items-center text-xs">
+            <span className="text-slate-600 font-semibold">Model Confidence</span>
+            <span className="font-bold text-navy-700 text-sm">{confPct}%</span>
           </div>
-          <div className="progress-bar" style={{ height: 5 }}>
+          <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
             <div
-              className="progress-fill"
-              style={{
-                width: `${confPct}%`,
-                background: 'linear-gradient(90deg, #93c5fd, var(--color-navy))',
-              }}
+              className="h-full rounded-full"
+              style={{ width: `${confPct}%`, background: 'linear-gradient(90deg, #93c5fd, #1d4ed8)' }}
             />
           </div>
           {modelType && (
-            <div style={{
-              fontSize: '0.7rem',
-              color: 'var(--color-text-dim)',
-              marginTop: '0.5rem',
-              textAlign: 'center',
-            }}>
-              {modelType}
-            </div>
+            <p className="text-[11px] text-slate-400 text-center">{modelType}</p>
           )}
-          {(modelType || '').toLowerCase().includes('placeholder') && (
-            <div style={{
-              fontSize: '0.68rem',
-              color: 'var(--color-text-muted)',
-              marginTop: '0.45rem',
-              fontStyle: 'italic',
-              lineHeight: 1.45,
-              textAlign: 'left',
-            }}>
-              ⓘ Confidence reflects internal scoring consistency, not a
-              calibrated clinical probability. Replace the placeholder model for
-              reliable estimates.
-            </div>
+          {isPlaceholder && (
+            <p className="text-[11px] text-slate-500 italic leading-relaxed text-center mt-1">
+              ⓘ Confidence reflects internal scoring consistency, not a calibrated clinical probability.
+            </p>
           )}
         </div>
       )}

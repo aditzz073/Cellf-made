@@ -94,40 +94,22 @@ export default function HeatmapViewer({ featureImportances }) {
 
   if (!featureImportances?.length) {
     return (
-      <div className="card" style={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '3rem',
-        color: 'var(--color-text-muted)',
-        gap: '0.75rem',
-      }}>
-        <span style={{ fontSize: '2rem', opacity: 0.4 }}>▦</span>
-        <p style={{ fontSize: '0.85rem' }}>No heatmap data available.</p>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center p-12 gap-3">
+        <span className="text-3xl opacity-30">▦</span>
+        <p className="text-sm text-slate-400">No heatmap data available.</p>
       </div>
     );
   }
 
   return (
-    <div className="card fade-in" style={{ padding: 0, overflow: 'hidden' }}>
-      <div style={{
-        padding: '1.1rem 1.5rem 0.75rem',
-        borderBottom: '1px solid var(--color-border)',
-        display: 'flex',
-        alignItems: 'baseline',
-        justifyContent: 'space-between',
-        flexWrap: 'wrap',
-        gap: '0.5rem',
-      }}>
-        <h3 className="card-title" style={{ marginBottom: 0 }}>
-          Expression Heatmap
-        </h3>
-        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
-          Patient vs Healthy Baseline · log₂ expression · sorted by impact
-        </span>
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden animate-fade-in">
+      <div className="px-5 py-4 border-b border-slate-200 flex items-baseline justify-between flex-wrap gap-2">
+        <div>
+          <p className="text-[10px] font-bold tracking-widest uppercase text-blue-600 mb-0.5">Expression Heatmap</p>
+          <p className="text-xs text-slate-500">Patient vs Healthy Baseline · log₂ expression · sorted by impact</p>
+        </div>
       </div>
-      <div style={{ padding: '0.5rem 0.5rem 0' }}>
+      <div className="p-2 pt-2">
         <div ref={divRef} style={{ width: '100%' }} />
       </div>
     </div>

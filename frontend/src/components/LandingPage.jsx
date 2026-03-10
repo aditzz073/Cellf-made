@@ -1,271 +1,286 @@
 import React from 'react';
+import { GENE_PANEL } from '../constants.js';
 
-const WORKFLOW_STEPS = [
+const WORKFLOW = [
   {
-    icon: '🧬',
-    title: 'Provide Gene Data',
-    desc: 'Upload a CSV, enter values manually, or paste raw data for 10 key genes.',
+    step: '01',
+    title: 'Input Gene Data',
+    desc: 'Upload a CSV file or manually enter expression values for the 10-gene transcriptomic panel.',
   },
   {
-    icon: '⚙️',
-    title: 'AI Model Analysis',
-    desc: 'Transcriptomic profiles are evaluated by biology-informed ML models.',
+    step: '02',
+    title: 'AI Model Inference',
+    desc: 'Biology-informed ML model evaluates immune response signature patterns across gene features.',
   },
   {
-    icon: '📊',
-    title: 'Risk Prediction',
-    desc: 'Receive a quantitative sepsis risk score with per-gene explainability.',
+    step: '03',
+    title: 'Risk Stratification',
+    desc: 'Receive a quantitative sepsis probability score with per-gene SHAP-inspired explainability.',
   },
   {
-    icon: '📄',
+    step: '04',
     title: 'Clinical Report',
-    desc: 'Download a structured PDF report suitable for research documentation.',
+    desc: 'Download a structured PDF report for research documentation and clinical reference.',
   },
 ];
 
-const FEATURES = [
-  { label: 'Gene Panel', value: '10-gene transcriptomic signature' },
-  { label: 'Risk Classes', value: 'High · Moderate · Low' },
-  { label: 'Explainability', value: 'Per-gene feature importance' },
-  { label: 'Output', value: 'Interactive heatmap + PDF report' },
+const SPECS = [
+  { icon: '🧬', label: '10-Gene Panel',       value: 'Transcriptomic signature' },
+  { icon: '📊', label: 'Risk Classes',         value: 'High · Moderate · Low' },
+  { icon: '🔬', label: 'Explainability',       value: 'SHAP feature importance' },
+  { icon: '📄', label: 'Report Output',        value: 'Interactive + PDF report' },
 ];
+
+// Deterministic gene positions (no random — stable SVG)
+const GENE_NODES = [
+  { x: 159, y: 54,  gene: 'IL6',     color: '#dc2626' },
+  { x: 232, y: 95,  gene: 'TLR4',    color: '#d97706' },
+  { x: 256, y: 177, gene: 'TNF',     color: '#dc2626' },
+  { x: 214, y: 255, gene: 'CXCL8',   color: '#f97316' },
+  { x: 122, y: 270, gene: 'MMP8',    color: '#7c3aed' },
+  { x:  60, y: 214, gene: 'HLA-DRA', color: '#1d4ed8' },
+  { x:  50, y: 128, gene: 'STAT3',   color: '#0891b2' },
+  { x: 104, y:  60, gene: 'CD14',    color: '#059669' },
+  { x: 228, y:  44, gene: 'LBP',     color: '#d97706' },
+  { x: 268, y: 136, gene: 'PCSK9',   color: '#7c3aed' },
+];
+
+function GeneNetworkSVG() {
+  return (
+    <div className="relative w-72 h-72 mx-auto">
+      <svg viewBox="0 0 320 320" className="w-full h-full">
+        {/* ring pulse */}
+        <circle cx={160} cy={160} r={70} fill="none" stroke="#e2e8f0" strokeWidth={1} strokeDasharray="4 4" />
+        <circle cx={160} cy={160} r={100} fill="none" stroke="#f1f5f9" strokeWidth={1} />
+
+        {/* spokes */}
+        {GENE_NODES.map((n) => (
+          <line key={`s-${n.gene}`} x1={160} y1={160} x2={n.x} y2={n.y}
+            stroke="#e2e8f0" strokeWidth={1.5} strokeDasharray="3 3" />
+        ))}
+
+        {/* center */}
+        <circle cx={160} cy={160} r={34} fill="#1e3a5f" />
+        <text x={160} y={156} textAnchor="middle" fill="white" fontSize={9} fontFamily="Inter" fontWeight="600">SEPSIS</text>
+        <text x={160} y={169} textAnchor="middle" fill="white" fontSize={9} fontFamily="Inter" fontWeight="600">RISK AI</text>
+
+        {/* gene nodes */}
+        {GENE_NODES.map((n) => (
+          <g key={n.gene}>
+            <circle cx={n.x} cy={n.y} r={22} fill={n.color} opacity={0.88} />
+            <text x={n.x} y={n.y + 4} textAnchor="middle" fill="white"
+              fontSize={n.gene.length > 5 ? 7 : 8}
+              fontFamily="JetBrains Mono, monospace" fontWeight="600">
+              {n.gene}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
 
 export default function LandingPage({ onStart }) {
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* ── Top bar ─────────────────────────────────────────── */}
-      <header style={{
-        background: 'var(--color-navy)',
-        padding: '0.9rem 1.5rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-          <span style={{ fontSize: '1.4rem' }}>🧬</span>
-          <span style={{ color: '#fff', fontWeight: 700, fontSize: '1.1rem', letterSpacing: '-0.01em' }}>
-            SepsisAI
-          </span>
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+
+      {/* ── Navigation ── */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <span className="text-xl">🧬</span>
+            <span className="font-bold text-navy-700 text-lg tracking-tight">SepsisAI</span>
+            <span className="hidden sm:block w-px h-4 bg-slate-200 mx-1" />
+            <span className="hidden sm:block text-xs text-slate-500 font-medium">
+              Transcriptomic Risk Analysis Platform
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-full">
+              Research Preview v1.0
+            </span>
+          </div>
         </div>
-        <span style={{
-          background: 'rgba(255,255,255,0.12)',
-          color: 'rgba(255,255,255,0.75)',
-          fontSize: '0.72rem',
-          fontWeight: 600,
-          padding: '0.3em 0.75em',
-          borderRadius: '999px',
-          letterSpacing: '0.05em',
-          textTransform: 'uppercase',
-          border: '1px solid rgba(255,255,255,0.2)',
-        }}>
-          Research Use Only
-        </span>
       </header>
 
-      {/* ── Hero ────────────────────────────────────────────── */}
-      <section style={{
-        background: 'linear-gradient(160deg, var(--color-navy) 0%, #163060 60%, #1a4080 100%)',
-        padding: '5rem 1.5rem 4rem',
-        textAlign: 'center',
-        flex: '0 0 auto',
-      }}>
-        <div style={{ maxWidth: 660, margin: '0 auto' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.4rem',
-            background: 'rgba(37,99,235,0.35)',
-            border: '1px solid rgba(147,197,253,0.35)',
-            borderRadius: '999px',
-            padding: '0.3em 0.9em',
-            fontSize: '0.78rem',
-            color: '#93c5fd',
-            fontWeight: 600,
-            letterSpacing: '0.07em',
-            textTransform: 'uppercase',
-            marginBottom: '1.5rem',
-          }}>
-            ◉ Clinical Decision Support Tool
+      {/* ── Hero ── */}
+      <section className="bg-white border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-6 py-20 grid lg:grid-cols-5 gap-12 items-center">
+
+          {/* Left text */}
+          <div className="lg:col-span-3">
+            <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-full px-4 py-1.5 mb-6">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              <span className="text-blue-700 text-xs font-semibold tracking-widest uppercase">
+                Gene Expression · ML Inference · Sepsis Risk
+              </span>
+            </div>
+
+            <h1 className="text-4xl lg:text-5xl font-extrabold text-navy-700 leading-tight mb-5">
+              AI-Based Sepsis<br />
+              <span className="bg-gradient-to-r from-blue-600 to-blue-900 bg-clip-text text-transparent">
+                Transcriptomic
+              </span>{' '}
+              Risk Analyzer
+            </h1>
+
+            <p className="text-slate-600 text-lg leading-relaxed mb-8 max-w-xl">
+              Upload patient gene expression data to predict sepsis risk using machine learning models
+              trained on transcriptomic datasets. Research-grade genomic analysis for clinical decision support.
+            </p>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                onClick={onStart}
+                className="inline-flex items-center gap-2 bg-navy-700 hover:bg-blue-800 text-white font-semibold px-7 py-3.5 rounded-lg transition-all shadow-lg hover:shadow-xl text-base"
+              >
+                Begin Analysis
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+              <a
+                href="#workflow"
+                className="inline-flex items-center gap-2 text-navy-700 border border-slate-300 hover:border-navy-700 hover:bg-navy-50 font-medium px-6 py-3.5 rounded-lg transition-all text-base"
+              >
+                How it works
+              </a>
+            </div>
           </div>
 
-          <h1 style={{
-            color: '#fff',
-            fontSize: 'clamp(1.8rem, 4vw, 2.8rem)',
-            fontWeight: 700,
-            lineHeight: 1.2,
-            letterSpacing: '-0.02em',
-            marginBottom: '1.1rem',
-          }}>
-            AI-Based Sepsis Risk Prediction<br />
-            <span style={{ color: '#93c5fd' }}>from Gene Expression Data</span>
-          </h1>
-
-          <p style={{
-            color: 'rgba(219,234,254,0.85)',
-            fontSize: '1.05rem',
-            lineHeight: 1.7,
-            marginBottom: '2.25rem',
-            maxWidth: 520,
-            margin: '0 auto 2.25rem',
-          }}>
-            Submit patient transcriptomic profiles to receive quantitative sepsis risk scores
-            powered by ML models trained on immune-response gene signatures.
-          </p>
-
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              className="btn btn-accent btn-lg"
-              onClick={onStart}
-              style={{ minWidth: 200 }}
-            >
-              Start Analysis →
-            </button>
-            <a
-              href="#how-it-works"
-              className="btn btn-secondary btn-lg"
-              style={{
-                background: 'rgba(255,255,255,0.1)',
-                color: '#fff',
-                border: '1px solid rgba(255,255,255,0.25)',
-                minWidth: 160,
-              }}
-            >
-              How It Works
-            </a>
+          {/* Right: gene network SVG */}
+          <div className="lg:col-span-2 hidden lg:block">
+            <GeneNetworkSVG />
           </div>
         </div>
       </section>
 
-      {/* ── Workflow diagram ─────────────────────────────────── */}
-      <section id="how-it-works" style={{
-        background: 'var(--color-surface-2)',
-        padding: '3.5rem 1.5rem',
-        borderTop: '1px solid var(--color-border)',
-      }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
-          <h4 style={{ textAlign: 'center', marginBottom: '2.5rem' }}>How It Works</h4>
-
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '0',
-            alignItems: 'center',
-          }}>
-            {WORKFLOW_STEPS.map((step, i) => (
-              <React.Fragment key={step.title}>
-                <div style={{
-                  background: 'var(--color-surface)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-lg)',
-                  padding: '1.5rem 1.25rem',
-                  textAlign: 'center',
-                  boxShadow: 'var(--shadow-sm)',
-                  transition: 'transform 0.2s, box-shadow 0.2s',
-                  cursor: 'default',
-                }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.transform = 'translateY(-3px)';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-md)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.transform = '';
-                    e.currentTarget.style.boxShadow = 'var(--shadow-sm)';
-                  }}
-                >
-                  <div style={{ fontSize: '2rem', marginBottom: '0.6rem' }}>{step.icon}</div>
-                  <div style={{
-                    display: 'inline-block',
-                    background: 'var(--color-accent-lt)',
-                    color: 'var(--color-accent)',
-                    borderRadius: '999px',
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
-                    padding: '0.15em 0.6em',
-                    marginBottom: '0.5rem',
-                    letterSpacing: '0.03em',
-                  }}>
-                    Step {i + 1}
-                  </div>
-                  <h3 style={{ fontSize: '0.95rem', marginBottom: '0.4rem', color: 'var(--color-navy)' }}>
-                    {step.title}
-                  </h3>
-                  <p style={{ fontSize: '0.8rem', lineHeight: 1.55, color: 'var(--color-text-muted)' }}>
-                    {step.desc}
-                  </p>
-                </div>
-                {i < WORKFLOW_STEPS.length - 1 && (
-                  <div style={{
-                    textAlign: 'center',
-                    fontSize: '1.4rem',
-                    color: 'var(--color-accent)',
-                    padding: '0 0.25rem',
-                  }}>
-                    →
-                  </div>
-                )}
-              </React.Fragment>
-            ))}
-          </div>
+      {/* ── Platform specs strip ── */}
+      <section className="bg-navy-700 py-4 border-b border-navy-800">
+        <div className="max-w-6xl mx-auto px-6 flex flex-wrap justify-center gap-x-10 gap-y-2">
+          {[
+            'Random Forest / Placeholder Model',
+            '10-Gene Diagnostic Panel',
+            'SHAP-inspired Explainability',
+            'GEO Sepsis Dataset',
+            'PDF Clinical Report',
+          ].map((item) => (
+            <span key={item} className="text-blue-200 text-xs font-medium flex items-center gap-1.5">
+              <span className="w-1 h-1 rounded-full bg-blue-400" />
+              {item}
+            </span>
+          ))}
         </div>
       </section>
 
-      {/* ── Feature highlights ───────────────────────────────── */}
-      <section style={{
-        background: 'var(--color-surface)',
-        padding: '3rem 1.5rem',
-        borderTop: '1px solid var(--color-border)',
-      }}>
-        <div style={{ maxWidth: 820, margin: '0 auto' }}>
-          <h4 style={{ textAlign: 'center', marginBottom: '1.75rem' }}>Platform Capabilities</h4>
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))',
-            gap: '1rem',
-          }}>
-            {FEATURES.map(f => (
-              <div key={f.label} style={{
-                background: 'var(--color-surface-2)',
-                border: '1px solid var(--color-border)',
-                borderRadius: 'var(--radius-md)',
-                padding: '1.1rem 1.25rem',
-                borderLeft: '3px solid var(--color-accent)',
-              }}>
-                <div style={{
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                  color: 'var(--color-text-muted)',
-                  marginBottom: '0.3rem',
-                }}>
-                  {f.label}
+      {/* ── Clinical Workflow ── */}
+      <section id="workflow" className="py-20 bg-slate-50">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-14">
+            <p className="text-xs font-bold text-blue-600 tracking-widest uppercase mb-2">
+              Analysis Pipeline
+            </p>
+            <h2 className="text-2xl font-bold text-navy-700">From Gene Data to Risk Report</h2>
+            <p className="text-slate-500 text-sm mt-2 max-w-xl mx-auto">
+              Four-stage automated transcriptomic analysis pipeline for sepsis risk prediction.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 relative">
+            {/* connecting line */}
+            <div className="hidden lg:block absolute top-10 left-[12.5%] right-[12.5%] h-px bg-slate-200 z-0" />
+
+            {WORKFLOW.map(({ step, title, desc }, idx) => (
+              <div key={step} className="relative z-10 flex flex-col items-center text-center group">
+                <div className="w-20 h-20 rounded-full bg-white border-2 border-slate-200 shadow-sm flex flex-col items-center justify-center mb-4 group-hover:border-blue-400 group-hover:shadow-md transition-all">
+                  <span className="text-[10px] font-bold text-blue-600 tracking-widest">{step}</span>
                 </div>
-                <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--color-navy)' }}>
-                  {f.value}
-                </div>
+                <h3 className="text-sm font-bold text-navy-700 mb-2">{title}</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── CTA footer ──────────────────────────────────────── */}
-      <section style={{
-        background: 'var(--color-navy)',
-        padding: '2.5rem 1.5rem',
-        textAlign: 'center',
-        marginTop: 'auto',
-      }}>
-        <p style={{ color: 'rgba(219,234,254,0.7)', fontSize: '0.82rem', marginBottom: '1rem' }}>
-          Ready to analyze a patient's transcriptomic profile?
-        </p>
-        <button className="btn btn-accent btn-lg" onClick={onStart}>
-          Begin Sepsis Risk Analysis →
-        </button>
-        <p style={{ color: 'rgba(219,234,254,0.45)', fontSize: '0.72rem', marginTop: '1.2rem' }}>
-          For research and educational purposes only. Not validated for clinical diagnosis.
-        </p>
+      {/* ── Feature specs grid ── */}
+      <section className="py-14 bg-white border-t border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-10">
+            <p className="text-xs font-bold text-blue-600 tracking-widest uppercase">Platform Capabilities</p>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+            {SPECS.map(({ icon, label, value }) => (
+              <div
+                key={label}
+                className="flex flex-col items-center text-center p-6 rounded-xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all cursor-default"
+              >
+                <span className="text-3xl mb-3">{icon}</span>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">{label}</p>
+                <p className="text-sm font-semibold text-navy-700">{value}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </section>
+
+      {/* ── Gene Panel ── */}
+      <section className="py-14 bg-slate-50">
+        <div className="max-w-6xl mx-auto px-6 text-center">
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">
+            10-Gene Diagnostic Panel
+          </p>
+          <div className="flex flex-wrap gap-2.5 justify-center mb-6">
+            {GENE_PANEL.map((gene) => (
+              <span
+                key={gene}
+                className="px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono font-bold text-navy-700 shadow-sm hover:border-blue-300 hover:bg-blue-50 transition-all cursor-default"
+              >
+                {gene}
+              </span>
+            ))}
+          </div>
+          <p className="text-xs text-slate-400 max-w-lg mx-auto">
+            Literature-curated immune response genes: pro-inflammatory cytokines, pattern recognition receptors,
+            and regulatory markers for sepsis stratification.
+          </p>
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section className="py-16 bg-navy-700">
+        <div className="max-w-2xl mx-auto px-6 text-center">
+          <h2 className="text-2xl font-bold text-white mb-3">Ready to Analyze?</h2>
+          <p className="text-blue-200 text-sm mb-8 leading-relaxed">
+            Upload gene expression data or enter values manually to generate a comprehensive
+            sepsis risk prediction with explainable AI.
+          </p>
+          <button
+            onClick={onStart}
+            className="inline-flex items-center gap-2 bg-white hover:bg-blue-50 text-navy-700 font-bold px-8 py-3.5 rounded-lg transition-all shadow-lg hover:shadow-xl text-base"
+          >
+            Start Analysis
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+              <path d="M5 12h14M12 5l7 7-7 7" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="bg-navy-900 py-8">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2.5">
+            <span className="text-lg">🧬</span>
+            <span className="font-bold text-white">SepsisAI</span>
+            <span className="text-blue-300 text-xs ml-1">Research Preview</span>
+          </div>
+          <p className="text-blue-300 text-xs text-center leading-relaxed max-w-md">
+            For research use only. Not validated for clinical diagnosis or treatment decisions.
+            Outputs are derived from a placeholder model until a trained model is loaded.
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }

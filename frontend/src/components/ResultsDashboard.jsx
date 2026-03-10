@@ -1,27 +1,29 @@
-import React from 'react';
-import RiskCard from './RiskCard.jsx';
-import GeneTable from './GeneTable.jsx';
-import HeatmapViewer from './HeatmapViewer.jsx';
-import ReportDownload from './ReportDownload.jsx';
+import React, { useState } from 'react';
+import RiskCard              from './RiskCard.jsx';
+import ConfidenceIndicator   from './ConfidenceIndicator.jsx';
+import GeneSignatureExplorer from './GeneSignatureExplorer.jsx';
+import HeatmapViewer         from './HeatmapViewer.jsx';
+import CohortComparison      from './CohortComparison.jsx';
+import ReportDownload        from './ReportDownload.jsx';
 
 /**
- * ResultsDashboard — full results page after analysis completes.
+ * ResultsDashboard — cBioPortal-style results page.
  *
  * Props:
- *   results       — full API response from /predict enriched with patientId
- *   onNewAnalysis — navigates back to input
- *   onGoHome      — navigates back to the landing page
+ *   results       — API response from /predict enriched with patientId
+ *   onNewAnalysis — back to input view
+ *   onGoHome      — back to landing page
  */
 export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
+  const [mode, setMode] = useState('clinical'); // 'clinical' | 'research'
   if (!results) return null;
 
-  // All risk fields live inside the prediction envelope returned by /predict.
-  // Top-level spread fallbacks retained for backwards compatibility.
+  // Normalize from prediction envelope (with top-level fallbacks)
   const prediction = results.prediction ?? {};
-  const patientId        = results.patientId      ?? 'ANONYMOUS';
+  const patientId           = results.patientId           ?? 'ANONYMOUS';
   const feature_importances = results.feature_importances ?? [];
-  const genes            = results.genes           ?? {};
-  const model_info       = results.model_info      ?? null;
+  const genes               = results.genes               ?? {};
+  const model_info          = results.model_info          ?? null;
 
   const finalRiskLevel  = prediction.risk_level  ?? results.risk_level  ?? 'Unknown';
   const finalRiskScore  = prediction.risk_score  ?? results.risk_score  ?? 0;
@@ -29,258 +31,230 @@ export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
   const finalModelType  = prediction.model_type  ?? results.model_type  ?? 'Placeholder model (demo)';
 
   const predictionPayload = {
-    risk_score:  finalRiskScore,
-    risk_level:  finalRiskLevel,
-    confidence:  finalConfidence,
-    model_type:  finalModelType,
+    risk_score: finalRiskScore,
+    risk_level: finalRiskLevel,
+    confidence: finalConfidence,
+    model_type: finalModelType,
   };
 
-  return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--color-bg)' }}>
+  const riskBadgeCls =
+    finalRiskLevel === 'High'     ? 'bg-red-50 text-red-700 border-red-200'   :
+    finalRiskLevel === 'Moderate' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                    'bg-green-50 text-green-700 border-green-200';
 
-      {/* ── Top bar ───────────────────────────────────────────── */}
-      <header style={{
-        background: 'var(--color-surface)',
-        borderBottom: '1px solid var(--color-border)',
-        padding: '0 1.5rem',
-        height: 56,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        boxShadow: 'var(--shadow-sm)',
-        position: 'sticky',
-        top: 0,
-        zIndex: 10,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button
-            type="button"
-            onClick={onGoHome}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--color-text-muted)',
-              fontSize: '0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.25rem 0',
-            }}
-          >
-            ← Home
-          </button>
-          <div style={{ width: 1, height: 14, background: 'var(--color-border)' }} />
-          <button
-            type="button"
-            onClick={onNewAnalysis}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              color: 'var(--color-text-muted)',
-              fontSize: '0.85rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.35rem',
-              padding: '0.25rem 0',
-            }}
-          >
-            + New Analysis
-          </button>
-          <div style={{ width: 1, height: 20, background: 'var(--color-border)' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <span style={{ fontSize: '1.1rem' }}>🧬</span>
-            <span style={{ fontWeight: 700, color: 'var(--color-navy)', fontSize: '1rem' }}>SepsisAI</span>
+  return (
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+
+      {/* ── Sticky Header ── */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between gap-4">
+
+          {/* Left: navigation */}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={onGoHome}
+              className="flex items-center gap-1.5 text-slate-500 hover:text-navy-700 text-sm font-medium transition-colors"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M19 12H5M12 5l-7 7 7 7" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Home
+            </button>
+            <div className="w-px h-4 bg-slate-200" />
+            <button
+              onClick={onNewAnalysis}
+              className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+            >
+              + New Analysis
+            </button>
           </div>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <span style={{ fontSize: '0.78rem', color: 'var(--color-text-muted)' }}>
-            Patient: <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--color-navy)' }}>
-              {patientId}
+
+          {/* Center: logo */}
+          <div className="hidden sm:flex items-center gap-2">
+            <span className="text-lg">🧬</span>
+            <span className="font-bold text-navy-700 text-base">SepsisAI</span>
+            <div className="w-px h-4 bg-slate-200 mx-1" />
+            <span className="text-xs text-slate-400 font-mono">
+              Patient: <strong className="text-navy-700">{patientId}</strong>
             </span>
-          </span>
-          <span className={`badge badge-${finalRiskLevel.toLowerCase()}`}>
-            {finalRiskLevel} Risk
-          </span>
+          </div>
+
+          {/* Right: mode toggle + risk badge */}
+          <div className="flex items-center gap-3">
+            {/* Clinical / Research toggle */}
+            <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5" role="group">
+              {[['clinical', 'Clinical'], ['research', 'Research']].map(([val, label]) => (
+                <button
+                  key={val}
+                  onClick={() => setMode(val)}
+                  className={`text-xs font-semibold px-3.5 py-1.5 rounded-md transition-all ${
+                    mode === val
+                      ? 'bg-white text-navy-700 shadow-sm'
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <span className={`hidden sm:inline-block text-xs font-bold px-3 py-1.5 rounded-full border ${riskBadgeCls}`}>
+              {finalRiskLevel} Risk
+            </span>
+          </div>
         </div>
       </header>
 
-      {/* ── Body ──────────────────────────────────────────────── */}
-      <div style={{ flex: 1, padding: '2rem 1.5rem 4rem', maxWidth: 960, width: '100%', margin: '0 auto' }}>
+      {/* ── Page body ── */}
+      <div className="flex-1 max-w-6xl w-full mx-auto px-6 py-8 space-y-5">
 
-        {/* Page title */}
-        <div style={{ marginBottom: '1.75rem' }}>
-          <h2 style={{ fontSize: '1.4rem', marginBottom: '0.25rem' }}>Sepsis Risk Assessment Results</h2>
-          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)' }}>
-            Transcriptomic analysis complete · {new Date().toLocaleDateString('en-US', {
-              year: 'numeric', month: 'long', day: 'numeric',
-            })}
-          </p>
+        {/* Page title row */}
+        <div className="flex items-baseline justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-navy-700">Sepsis Risk Assessment</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              &nbsp;·&nbsp;
+              {mode === 'clinical' ? 'Clinical overview' : 'Full research dashboard'}
+            </p>
+          </div>
+          <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${riskBadgeCls}`}>
+            {finalRiskLevel} Risk
+          </span>
         </div>
 
-        {/* ── Top row: Risk card + analysis summary ────────── */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(260px, 360px) 1fr',
-          gap: '1.25rem',
-          marginBottom: '1.25rem',
-          alignItems: 'start',
-        }}>
-          <RiskCard
-            riskScore={finalRiskScore}
-            riskLevel={finalRiskLevel}
-            confidence={finalConfidence}
-            modelType={finalModelType}
-          />
+        {/* ── Top row: Risk Card + Summary + Confidence ── */}
+        <div className="grid lg:grid-cols-5 gap-5 items-start">
+          {/* Risk card */}
+          <div className="lg:col-span-2">
+            <RiskCard
+              riskScore={finalRiskScore}
+              riskLevel={finalRiskLevel}
+              confidence={finalConfidence}
+              modelType={finalModelType}
+            />
+          </div>
 
-          {/* Summary info card */}
-          <div className="card fade-in" style={{ height: '100%' }}>
-            <h3 className="card-title">Analysis Summary</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem' }}>
-              <InfoRow label="Patient ID" value={patientId} mono />
-              <InfoRow label="Risk Level" value={
-                <span className={`badge badge-${finalRiskLevel.toLowerCase()}`}>{finalRiskLevel}</span>
-              } />
-              <InfoRow label="Risk Score" value={`${(finalRiskScore * 100).toFixed(1)}% (${finalRiskScore.toFixed(4)})`} mono />
-              {finalConfidence != null && (
-                <InfoRow label="Confidence" value={`${(finalConfidence * 100).toFixed(1)}%`} mono />
-              )}
-              <InfoRow label="Genes Analyzed" value={`${feature_importances.length} / 10`} />
-              <InfoRow label="Model" value={finalModelType} />
+          {/* Summary + confidence stacked */}
+          <div className="lg:col-span-3 flex flex-col gap-4">
+            {/* Analysis summary */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+              <p className="text-[10px] font-bold tracking-widest uppercase text-blue-600 mb-4">
+                Analysis Summary
+              </p>
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3.5">
+                {[
+                  { label: 'Patient ID',       value: patientId,                                                mono: true },
+                  { label: 'Risk Level',        value: finalRiskLevel,                                          color: finalRiskLevel === 'High' ? '#dc2626' : finalRiskLevel === 'Moderate' ? '#d97706' : '#16a34a' },
+                  { label: 'Risk Score',        value: `${(finalRiskScore * 100).toFixed(1)}%  (${finalRiskScore.toFixed(4)})`, mono: true },
+                  { label: 'Confidence',        value: finalConfidence != null ? `${Math.round(finalConfidence * 100)}%` : 'N/A', mono: true },
+                  { label: 'Genes Analyzed',    value: `${feature_importances.length} / 10` },
+                  { label: 'Model',             value: finalModelType },
+                ].map(({ label, value, mono, color }) => (
+                  <div key={label} className="border-b border-slate-100 pb-2.5">
+                    <p className="text-[11px] text-slate-400 font-medium mb-0.5">{label}</p>
+                    <p
+                      className={`text-sm font-semibold text-navy-700 ${mono ? 'font-mono' : ''}`}
+                      style={color ? { color } : {}}
+                    >
+                      {value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-xs text-amber-700 leading-relaxed">
+                ⚠ For research use only. Not validated for clinical diagnosis or treatment decisions.
+              </div>
             </div>
 
-            {/* Disclaimer */}
-            <div style={{
-              marginTop: '1.25rem',
-              background: 'var(--color-risk-mod-bg)',
-              border: '1px solid var(--color-risk-mod-bd)',
-              borderRadius: 'var(--radius-md)',
-              padding: '0.75rem',
-              fontSize: '0.75rem',
-              color: 'var(--color-risk-mod)',
-              lineHeight: 1.55,
-            }}>
-              ⚠ For research use only. Not validated for clinical diagnosis or treatment decisions.
+            {/* Confidence indicator */}
+            <ConfidenceIndicator confidence={finalConfidence} modelType={finalModelType} />
+          </div>
+        </div>
+
+        {/* ── Gene Signature Explorer (always shown) ── */}
+        {feature_importances.length > 0 && (
+          <GeneSignatureExplorer featureImportances={feature_importances} />
+        )}
+
+        {/* ── Research-mode extras ── */}
+        {mode === 'research' && (
+          <>
+            {/* Interactive heatmap */}
+            {feature_importances.length > 0 && (
+              <HeatmapViewer featureImportances={feature_importances} />
+            )}
+
+            {/* Cohort comparison + Model info */}
+            <div className="grid lg:grid-cols-2 gap-5">
+              <CohortComparison riskScore={finalRiskScore} featureImportances={feature_importances} />
+              <ModelInfoPanel
+                modelType={finalModelType}
+                genesCount={feature_importances.length}
+                modelInfo={model_info}
+              />
             </div>
-          </div>
-        </div>
-
-        {/* ── Model Information Panel ───────────────────────────── */}
-        <ModelInfoPanel modelType={finalModelType} genesCount={feature_importances.length} modelInfo={model_info} />
-
-        {/* ── Gene feature importance table ─────────────────── */}
-        {feature_importances.length > 0 && (
-          <div style={{ marginBottom: '1.25rem' }}>
-            <GeneTable featureImportances={feature_importances} />
-          </div>
+          </>
         )}
 
-        {/* ── Interactive heatmap ───────────────────────────── */}
-        {feature_importances.length > 0 && (
-          <div style={{ marginBottom: '1.25rem' }}>
-            <HeatmapViewer featureImportances={feature_importances} />
-          </div>
-        )}
-
-        {/* ── Report download ───────────────────────────────── */}
-        <div className="card fade-in" style={{ textAlign: 'center', padding: '2rem' }}>
-          <h3 style={{ fontSize: '1rem', marginBottom: '0.4rem' }}>Clinical Report</h3>
-          <p style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '1.5rem' }}>
-            Download a structured PDF report for research documentation.
+        {/* ── Download Report ── */}
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-8 text-center">
+          <p className="text-[10px] font-bold tracking-widest uppercase text-blue-600 mb-1.5">
+            Clinical Report
           </p>
-          <ReportDownload
-            patientId={patientId}
-            genes={genes}
-            prediction={predictionPayload}
-          />
+          <h3 className="text-lg font-bold text-navy-700 mb-1.5">Download Research Report</h3>
+          <p className="text-sm text-slate-500 mb-6 max-w-md mx-auto">
+            Generate a structured PDF report with gene expression profile, risk score,
+            feature importances, and clinical disclaimer.
+          </p>
+          <ReportDownload patientId={patientId} genes={genes} prediction={predictionPayload} />
         </div>
+
+        {/* Footer note */}
+        <p className="text-center text-xs text-slate-400 pb-4">
+          SepsisAI Research Preview · For investigational use only · Not a medical device
+        </p>
       </div>
     </div>
   );
 }
 
-function InfoRow({ label, value, mono = false }) {
-  return (
-    <div style={{
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      paddingBottom: '0.6rem',
-      borderBottom: '1px solid var(--color-border)',
-      gap: '0.75rem',
-    }}>
-      <span style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', fontWeight: 500, flexShrink: 0 }}>
-        {label}
-      </span>
-      <span style={{
-        fontSize: '0.85rem',
-        fontWeight: 600,
-        color: 'var(--color-navy)',
-        fontFamily: mono ? 'var(--font-mono)' : 'inherit',
-        textAlign: 'right',
-      }}>
-        {value}
-      </span>
-    </div>
-  );
-}
-
+/* ── ModelInfoPanel (internal to this file) ── */
 function ModelInfoPanel({ modelType, genesCount, modelInfo }) {
   const isPlaceholder = (modelType || '').toLowerCase().includes('placeholder');
-  // Use server-provided model_info when available, fall back to client-side defaults
   const specs = [
-    { label: 'Algorithm',       value: modelInfo?.algorithm      ?? (isPlaceholder ? 'Weighted Linear (placeholder)' : 'Random Forest Classifier') },
-    { label: 'Genes Used',      value: `${modelInfo?.genes_used ?? genesCount} (10-gene transcriptomic panel)` },
-    { label: 'Dataset Source',  value: modelInfo?.dataset_source ?? 'GEO Sepsis Dataset (GSE Cohorts)' },
-    { label: 'Explainability',  value: modelInfo?.explainability ?? (isPlaceholder ? 'Mock SHAP-inspired scores' : 'SHAP TreeExplainer') },
-    { label: 'Output',          value: 'Probability score [0–1] + categorical risk level' },
-    { label: 'Model Status',    value: isPlaceholder ? '⚠ Placeholder active — not clinically trained' : '✓ Trained model active' },
+    { label: 'Algorithm',      value: modelInfo?.algorithm      ?? (isPlaceholder ? 'Weighted Linear (placeholder)' : 'Random Forest Classifier') },
+    { label: 'Genes Used',     value: `${modelInfo?.genes_used  ?? genesCount} (10-gene panel)` },
+    { label: 'Dataset Source', value: modelInfo?.dataset_source ?? 'GEO Sepsis Dataset (GSE Cohorts)' },
+    { label: 'Explainability', value: modelInfo?.explainability ?? (isPlaceholder ? 'Mock SHAP-inspired' : 'SHAP TreeExplainer') },
+    { label: 'Output Type',    value: 'Probability [0–1] + risk classification' },
+    { label: 'Status',         value: isPlaceholder ? '⚠ Placeholder active' : '✓ Trained model active' },
   ];
 
   return (
-    <div className="card fade-in" style={{ marginBottom: '1.25rem' }}>
-      <h3 className="card-title" style={{ marginBottom: '1rem' }}>
-        Model Information
-      </h3>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-        gap: '0.75rem 1.5rem',
-      }}>
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-slate-200">
+        <p className="text-[10px] font-bold tracking-widest uppercase text-blue-600 mb-0.5">
+          Model Information
+        </p>
+        <p className="text-xs text-slate-500">Research credibility &amp; model provenance</p>
+      </div>
+      <div className="p-5 grid grid-cols-2 gap-4">
         {specs.map(({ label, value }) => (
-          <div key={label} style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.2rem',
-            paddingBottom: '0.6rem',
-            borderBottom: '1px solid var(--color-border)',
-          }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {label}
-            </span>
-            <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--color-navy)' }}>
-              {value}
-            </span>
+          <div key={label} className="border-b border-slate-100 pb-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">{label}</p>
+            <p className="text-sm font-semibold text-navy-700 leading-snug">{value}</p>
           </div>
         ))}
       </div>
-
       {isPlaceholder && (
-        <div style={{
-          marginTop: '1rem',
-          background: 'var(--color-accent-lt)',
-          border: '1px solid #bfdbfe',
-          borderRadius: 'var(--radius-md)',
-          padding: '0.75rem 1rem',
-          fontSize: '0.78rem',
-          color: 'var(--color-navy)',
-          lineHeight: 1.6,
-        }}>
-          <strong>Developer note:</strong> The placeholder model uses biology-informed weights derived from sepsis literature.
-          Drop a trained <code style={{ background: '#dbeafe', padding: '0.1em 0.35em', borderRadius: 4, fontFamily: 'var(--font-mono)' }}>sepsis_model.pkl</code> into{' '}
-          <code style={{ background: '#dbeafe', padding: '0.1em 0.35em', borderRadius: 4, fontFamily: 'var(--font-mono)' }}>backend/models/</code> and restart the server to activate the real model.
-          See README for integration instructions.
+        <div className="px-5 pb-5">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-navy-700 leading-relaxed">
+            <strong>Integration:</strong> Drop a trained{' '}
+            <code className="bg-blue-100 px-1.5 py-0.5 rounded font-mono">sepsis_model.pkl</code> into{' '}
+            <code className="bg-blue-100 px-1.5 py-0.5 rounded font-mono">backend/models/</code>{' '}
+            and restart the server to activate the real model.
+          </div>
         </div>
       )}
     </div>
