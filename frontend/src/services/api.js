@@ -3,12 +3,20 @@
  * All backend communication goes through this module.
  */
 import axios from 'axios';
+import { getToken } from './authApi.js';
 
 const BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const http = axios.create({
   baseURL: BASE,
   timeout: 90_000,
+});
+
+// Attach JWT on every request if available
+http.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
 });
 
 export const API = {

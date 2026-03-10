@@ -18,3 +18,10 @@ Pillow>=10.0.0
 
 # Validation / serialisation
 pydantic>=2.7.0
+pydantic[email]>=2.7.0
+
+# Auth / Database
+sqlalchemy>=2.0
+python-jose[cryptography]>=3.3
+passlib[bcrypt]>=1.7
+python-dotenv>=1.0

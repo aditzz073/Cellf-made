@@ -5,6 +5,7 @@ import GeneSignatureExplorer from './GeneSignatureExplorer.jsx';
 import HeatmapViewer         from './HeatmapViewer.jsx';
 import CohortComparison      from './CohortComparison.jsx';
 import ReportDownload        from './ReportDownload.jsx';
+import { useAuth }           from '../context/AuthContext.jsx';
 
 /**
  * ResultsDashboard — cBioPortal-style results page.
@@ -16,11 +17,14 @@ import ReportDownload        from './ReportDownload.jsx';
  */
 export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
   const [mode, setMode] = useState('clinical'); // 'clinical' | 'research'
+  const { user } = useAuth();
   if (!results) return null;
 
   // Normalize from prediction envelope (with top-level fallbacks)
   const prediction = results.prediction ?? {};
-  const patientId           = results.patientId           ?? 'ANONYMOUS';
+  const patientId           = results.patientId && results.patientId !== 'ANONYMOUS'
+    ? results.patientId
+    : (user?.name ?? 'Anonymous');
   const feature_importances = results.feature_importances ?? [];
   const genes               = results.genes               ?? {};
   const model_info          = results.model_info          ?? null;

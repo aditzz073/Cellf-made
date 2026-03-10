@@ -1,5 +1,6 @@
 import React from 'react';
 import { GENE_PANEL } from '../constants.js';
+import Navbar from './Navbar.jsx';
 
 const WORKFLOW = [
   {
@@ -80,31 +81,20 @@ function GeneNetworkSVG() {
   );
 }
 
-export default function LandingPage({ onStart }) {
+export default function LandingPage({ onStart, onLogin, onSignup, onProfile }) {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
 
       {/* ── Navigation ── */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <span className="text-xl">🧬</span>
-            <span className="font-bold text-navy-700 text-lg tracking-tight">SepsisAI</span>
-            <span className="hidden sm:block w-px h-4 bg-slate-200 mx-1" />
-            <span className="hidden sm:block text-xs text-slate-500 font-medium">
-              Transcriptomic Risk Analysis Platform
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-full">
-              Research Preview v1.0
-            </span>
-          </div>
-        </div>
-      </header>
+      <Navbar
+        onLogin={onLogin}
+        onSignup={onSignup}
+        onProfile={onProfile}
+        onGoHome={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      />
 
       {/* ── Hero ── */}
-      <section className="bg-white border-b border-slate-200">
+      <section id="home" className="bg-white border-b border-slate-200">
         <div className="max-w-6xl mx-auto px-6 py-20 grid lg:grid-cols-5 gap-12 items-center">
 
           {/* Left text */}
@@ -140,7 +130,8 @@ export default function LandingPage({ onStart }) {
                 </svg>
               </button>
               <a
-                href="#workflow"
+                href="#features"
+                onClick={e => { e.preventDefault(); document.querySelector('#features')?.scrollIntoView({ behavior: 'smooth' }); }}
                 className="inline-flex items-center gap-2 text-navy-700 border border-slate-300 hover:border-navy-700 hover:bg-navy-50 font-medium px-6 py-3.5 rounded-lg transition-all text-base"
               >
                 How it works
@@ -174,7 +165,7 @@ export default function LandingPage({ onStart }) {
       </section>
 
       {/* ── Clinical Workflow ── */}
-      <section id="workflow" className="py-20 bg-slate-50">
+      <section id="features" className="py-20 bg-slate-50">
         <div className="max-w-6xl mx-auto px-6">
           <div className="text-center mb-14">
             <p className="text-xs font-bold text-blue-600 tracking-widest uppercase mb-2">
@@ -225,7 +216,7 @@ export default function LandingPage({ onStart }) {
       </section>
 
       {/* ── Gene Panel ── */}
-      <section className="py-14 bg-slate-50">
+      <section id="about" className="py-14 bg-slate-50">
         <div className="max-w-6xl mx-auto px-6 text-center">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">
             10-Gene Diagnostic Panel
@@ -248,7 +239,7 @@ export default function LandingPage({ onStart }) {
       </section>
 
       {/* ── CTA ── */}
-      <section className="py-16 bg-navy-700">
+      <section id="contact" className="py-16 bg-navy-700">
         <div className="max-w-2xl mx-auto px-6 text-center">
           <h2 className="text-2xl font-bold text-white mb-3">Ready to Analyze?</h2>
           <p className="text-blue-200 text-sm mb-8 leading-relaxed">

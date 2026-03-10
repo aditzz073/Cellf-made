@@ -10,9 +10,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from config import CORS_ORIGINS
+from database import engine, Base
 from routes.predict import router as predict_router
 from routes.report import router as report_router
 from routes.explain import router as explain_router
+from routes.auth import router as auth_router
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,6 +27,8 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """Application lifespan handler — runs startup / shutdown logic."""
     logger.info("SepsisAI API starting up …")
+    # Create all DB tables (no-op if they already exist)
+    Base.metadata.create_all(bind=engine)
     yield
     logger.info("SepsisAI API shutting down.")
 
@@ -79,6 +83,7 @@ app.add_middleware(
 app.include_router(predict_router)
 app.include_router(report_router)
 app.include_router(explain_router)
+app.include_router(auth_router)
 
 
 # ---------------------------------------------------------------------------

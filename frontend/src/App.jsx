@@ -3,6 +3,9 @@
  *
  * View state machine:
  *   'landing'   → LandingPage
+ *   'login'     → LoginPage
+ *   'signup'    → SignupPage
+ *   'profile'   → ProfilePage
  *   'input'     → DataInput (3-tab input)
  *   'validating'→ ValidationStatus (animated client-side checks)
  *   'loading'   → LoadingScreen (API call in progress)
@@ -10,7 +13,11 @@
  */
 
 import React, { useState, useCallback } from 'react';
+import { AuthProvider }  from './context/AuthContext.jsx';
 import LandingPage       from './components/LandingPage.jsx';
+import LoginPage         from './pages/LoginPage.jsx';
+import SignupPage        from './pages/SignupPage.jsx';
+import ProfilePage       from './pages/ProfilePage.jsx';
 import DataInput         from './components/DataInput.jsx';
 import ValidationStatus  from './components/ValidationStatus.jsx';
 import LoadingScreen     from './components/LoadingScreen.jsx';
@@ -87,12 +94,15 @@ function buildGenesValidationSteps(data) {
   ];
 }
 
-export default function App() {
+function AppInner() {
   const [view,            setView]           = useState('landing');
+  const [prevView,        setPrevView]       = useState('landing'); // for profile back nav
   const [pendingData,     setPendingData]    = useState(null);  // { type, data, patientId }
   const [validationSteps, setValidationSteps]= useState([]);
   const [results,         setResults]        = useState(null);
   const [inputError,      setInputError]     = useState('');
+
+  function goTo(v) { setPrevView(view); setView(v); }
 
   /* ── Called by DataInput when user submits ── */
   const handleDataSubmit = useCallback(async ({ type, data, patientId }) => {
@@ -145,7 +155,39 @@ export default function App() {
   /* ── View router ── */
   switch (view) {
     case 'landing':
-      return <LandingPage onStart={() => setView('input')} />;
+      return (
+        <LandingPage
+          onStart={() => setView('input')}
+          onLogin={() => goTo('login')}
+          onSignup={() => goTo('signup')}
+          onProfile={() => goTo('profile')}
+        />
+      );
+
+    case 'login':
+      return (
+        <LoginPage
+          onSuccess={() => setView('landing')}
+          onGoSignup={() => setView('signup')}
+          onGoHome={() => setView('landing')}
+        />
+      );
+
+    case 'signup':
+      return (
+        <SignupPage
+          onSuccess={() => setView('landing')}
+          onGoLogin={() => setView('login')}
+          onGoHome={() => setView('landing')}
+        />
+      );
+
+    case 'profile':
+      return (
+        <ProfilePage
+          onBack={() => setView(prevView === 'profile' ? 'landing' : (prevView || 'landing'))}
+        />
+      );
 
     case 'input':
       return (
@@ -188,7 +230,15 @@ export default function App() {
       );
 
     default:
-      return <LandingPage onStart={() => setView('input')} />;
+      return <LandingPage onStart={() => setView('input')} onLogin={() => goTo('login')} onSignup={() => goTo('signup')} onProfile={() => goTo('profile')} />;
   }
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppInner />
+    </AuthProvider>
+  );
 }
 
