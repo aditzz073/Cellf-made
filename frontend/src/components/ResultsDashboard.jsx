@@ -10,27 +10,23 @@ import ReportDownload from './ReportDownload.jsx';
  * Props:
  *   results       — full API response from /predict enriched with patientId
  *   onNewAnalysis — navigates back to input
+ *   onGoHome      — navigates back to the landing page
  */
-export default function ResultsDashboard({ results, onNewAnalysis }) {
+export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
   if (!results) return null;
 
-  const {
-    patientId      = 'ANONYMOUS',
-    risk_level     = 'Unknown',
-    risk_score     = 0,
-    confidence     = null,
-    model_type     = 'Placeholder model (demo)',
-    feature_importances = [],
-    genes          = {},
-    model_info     = null,
-  } = results;
-
-  // Flatten prediction fields from nested .prediction envelope if present
+  // All risk fields live inside the prediction envelope returned by /predict.
+  // Top-level spread fallbacks retained for backwards compatibility.
   const prediction = results.prediction ?? {};
-  const finalRiskLevel  = prediction.risk_level  ?? risk_level;
-  const finalRiskScore  = prediction.risk_score  ?? risk_score;
-  const finalConfidence = prediction.confidence  ?? confidence;
-  const finalModelType  = prediction.model_type  ?? model_type;
+  const patientId        = results.patientId      ?? 'ANONYMOUS';
+  const feature_importances = results.feature_importances ?? [];
+  const genes            = results.genes           ?? {};
+  const model_info       = results.model_info      ?? null;
+
+  const finalRiskLevel  = prediction.risk_level  ?? results.risk_level  ?? 'Unknown';
+  const finalRiskScore  = prediction.risk_score  ?? results.risk_score  ?? 0;
+  const finalConfidence = prediction.confidence  ?? results.confidence  ?? null;
+  const finalModelType  = prediction.model_type  ?? results.model_type  ?? 'Placeholder model (demo)';
 
   const predictionPayload = {
     risk_score:  finalRiskScore,
@@ -59,6 +55,24 @@ export default function ResultsDashboard({ results, onNewAnalysis }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <button
             type="button"
+            onClick={onGoHome}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              color: 'var(--color-text-muted)',
+              fontSize: '0.85rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.25rem 0',
+            }}
+          >
+            ← Home
+          </button>
+          <div style={{ width: 1, height: 14, background: 'var(--color-border)' }} />
+          <button
+            type="button"
             onClick={onNewAnalysis}
             style={{
               background: 'none',
@@ -72,7 +86,7 @@ export default function ResultsDashboard({ results, onNewAnalysis }) {
               padding: '0.25rem 0',
             }}
           >
-            ← New Analysis
+            + New Analysis
           </button>
           <div style={{ width: 1, height: 20, background: 'var(--color-border)' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>

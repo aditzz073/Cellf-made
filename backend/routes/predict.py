@@ -20,6 +20,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, field_validator
 
+from config import GENE_PANEL
 from services.predictor import run_prediction
 from services.explainability import get_gene_impacts
 from services.heatmap_generator import generate_heatmap_image
@@ -28,12 +29,6 @@ from utils.validation import validate_dataframe
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-# Ordered list of genes expected by the model / shown in the template
-GENE_PANEL: list[str] = [
-    "IL6", "TLR4", "HLA-DRA", "STAT3", "TNF",
-    "CXCL8", "CD14", "MMP8", "LBP", "PCSK9",
-]
 
 
 # ---------------------------------------------------------------------------

@@ -6,12 +6,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import Plotly from 'plotly.js-dist-min';
-
-// Fallback baseline values (healthy median log₂ expression)
-const REFERENCE_BASELINE = {
-  IL6: 2.1, TLR4: 4.5, 'HLA-DRA': 6.8, STAT3: 5.0, TNF: 2.4,
-  CXCL8: 2.8, CD14: 5.9, MMP8: 1.8, LBP: 4.1, PCSK9: 3.6,
-};
+import { REFERENCE_BASELINE } from '../constants.js';
 
 /**
  * HeatmapViewer

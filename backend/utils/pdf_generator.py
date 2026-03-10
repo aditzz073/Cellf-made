@@ -19,6 +19,8 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
+from config import REFERENCE_BASELINE
+
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.lib import colors
@@ -109,8 +111,6 @@ def generate_report_pdf(
     Returns:
         BytesIO buffer positioned at 0, ready for streaming.
     """
-    from services.explainability import REFERENCE_BASELINE  # avoid circular import
-
     buf = io.BytesIO()
     doc = SimpleDocTemplate(
         buf,

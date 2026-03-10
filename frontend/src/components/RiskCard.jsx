@@ -137,6 +137,20 @@ export default function RiskCard({ riskScore, riskLevel, confidence, modelType }
               {modelType}
             </div>
           )}
+          {(modelType || '').toLowerCase().includes('placeholder') && (
+            <div style={{
+              fontSize: '0.68rem',
+              color: 'var(--color-text-muted)',
+              marginTop: '0.45rem',
+              fontStyle: 'italic',
+              lineHeight: 1.45,
+              textAlign: 'left',
+            }}>
+              ⓘ Confidence reflects internal scoring consistency, not a
+              calibrated clinical probability. Replace the placeholder model for
+              reliable estimates.
+            </div>
+          )}
         </div>
       )}
     </div>

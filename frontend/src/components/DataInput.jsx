@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import CSVUpload from './CSVUpload.jsx';
 import ManualInputForm, { emptyGenes, ALL_GENES } from './ManualInputForm.jsx';
 import PasteCSV from './PasteCSV.jsx';
-
-const REQUIRED_GENES = ['IL6', 'TLR4', 'HLA-DRA', 'STAT3', 'TNF', 'CXCL8', 'CD14', 'MMP8', 'LBP', 'PCSK9'];
+import { GENE_PANEL as REQUIRED_GENES } from '../constants.js';
 
 const TABS = [
   { id: 'upload', label: '📂 Upload CSV' },

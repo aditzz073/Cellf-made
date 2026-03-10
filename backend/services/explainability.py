@@ -31,24 +31,9 @@ import logging
 import math
 from typing import Optional
 
-logger = logging.getLogger(__name__)
+from config import REFERENCE_BASELINE
 
-# ---------------------------------------------------------------------------
-# Reference baseline
-# Healthy control median log₂ expression values (literature-derived estimates)
-# ---------------------------------------------------------------------------
-REFERENCE_BASELINE: dict[str, float] = {
-    "IL6":     2.1,
-    "TLR4":    4.5,
-    "HLA-DRA": 6.8,
-    "STAT3":   5.0,
-    "TNF":     2.4,
-    "CXCL8":   2.8,
-    "CD14":    5.9,
-    "MMP8":    1.8,
-    "LBP":     4.1,
-    "PCSK9":   3.6,
-}
+logger = logging.getLogger(__name__)
 
 # Base directional weights:  positive → risk-increasing,  negative → protective
 _BASE_IMPACTS: dict[str, float] = {

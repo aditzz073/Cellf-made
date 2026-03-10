@@ -16,24 +16,54 @@ import ValidationStatus  from './components/ValidationStatus.jsx';
 import LoadingScreen     from './components/LoadingScreen.jsx';
 import ResultsDashboard  from './components/ResultsDashboard.jsx';
 import { API, extractApiError } from './services/api.js';
+import { GENE_PANEL } from './constants.js';
 
-const REQUIRED_GENES = ['IL6', 'TLR4', 'HLA-DRA', 'STAT3', 'TNF', 'CXCL8', 'CD14', 'MMP8', 'LBP', 'PCSK9'];
+/**
+ * Parses and validates an uploaded CSV File client-side.
+ * Returns an array of step objects for ValidationStatus.
+ */
+async function buildFileValidationSteps(file) {
+  const steps = [
+    { label: 'File accepted', detail: `${file.name} (${(file.size / 1024).toFixed(1)} KB)`, status: 'ok' },
+  ];
 
-/** Builds the validation step objects shown in ValidationStatus */
-function buildValidationSteps(type, data) {
-  if (type === 'file') {
-    return [
-      { label: 'File accepted',               detail: `${data.name} (${(data.size / 1024).toFixed(1)} KB)`, status: 'ok' },
-      { label: 'Checking CSV format',          detail: 'Gene and Expression columns present',                status: 'ok' },
-      { label: 'Sending for backend validation', detail: 'Full validation performed server-side',            status: 'ok' },
-    ];
+  let text;
+  try {
+    text = await file.text();
+  } catch {
+    return [...steps, { label: 'Checking CSV format', detail: 'Could not read file.', status: 'error' }];
   }
-  // genes dict
-  const geneCount  = Object.keys(data).length;
-  const present    = REQUIRED_GENES.filter(g => g in data);
-  const allPresent = present.length === REQUIRED_GENES.length;
-  const allInRange = Object.values(data).every(v => v >= 0 && v <= 20);
 
+  const lines = text.trim().split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length < 2) {
+    return [...steps, { label: 'Checking CSV format', detail: 'File must have a header row and at least one data row.', status: 'error' }];
+  }
+
+  const header = lines[0].split(',').map(h => h.trim());
+  const geneIdx = header.findIndex(h => h === 'Gene');
+  const exprIdx = header.findIndex(h => h === 'Expression');
+  if (geneIdx === -1 || exprIdx === -1) {
+    return [...steps, { label: 'Checking CSV format', detail: `Required columns missing. Found: ${header.join(', ')}`, status: 'error' }];
+  }
+  steps.push({ label: 'Checking CSV format', detail: 'Gene and Expression columns present', status: 'ok' });
+
+  const foundGenes = new Set(
+    lines.slice(1).map(row => row.split(',')[geneIdx]?.trim()).filter(Boolean)
+  );
+  const missing = GENE_PANEL.filter(g => !foundGenes.has(g));
+  if (missing.length > 0) {
+    return [...steps, { label: 'Required gene panel check', detail: `Missing genes: ${missing.join(', ')}`, status: 'error' }];
+  }
+  steps.push({ label: 'Required gene panel check', detail: `All ${GENE_PANEL.length} required genes present`, status: 'ok' });
+  steps.push({ label: 'Sending for backend validation', detail: 'Full validation performed server-side', status: 'ok' });
+  return steps;
+}
+
+/** Builds validation steps for genes dict (manual / paste input). */
+function buildGenesValidationSteps(data) {
+  const geneCount  = Object.keys(data).length;
+  const allPresent = GENE_PANEL.every(g => g in data);
+  const allInRange = Object.values(data).every(v => v >= 0 && v <= 20);
   return [
     {
       label:  'Gene expression data loaded',
@@ -43,8 +73,8 @@ function buildValidationSteps(type, data) {
     {
       label:  'Required gene panel check',
       detail: allPresent
-        ? `All ${REQUIRED_GENES.length} required genes present`
-        : `Missing: ${REQUIRED_GENES.filter(g => !(g in data)).join(', ')}`,
+        ? `All ${GENE_PANEL.length} required genes present`
+        : `Missing: ${GENE_PANEL.filter(g => !(g in data)).join(', ')}`,
       status: allPresent ? 'ok' : 'error',
     },
     {
@@ -65,13 +95,14 @@ export default function App() {
   const [inputError,      setInputError]     = useState('');
 
   /* ── Called by DataInput when user submits ── */
-  const handleDataSubmit = useCallback(({ type, data, patientId }) => {
+  const handleDataSubmit = useCallback(async ({ type, data, patientId }) => {
     setInputError('');
-    const steps = buildValidationSteps(type, data);
+    const steps = type === 'file'
+      ? await buildFileValidationSteps(data)
+      : buildGenesValidationSteps(data);
     const anyError = steps.some(s => s.status === 'error');
 
     if (anyError) {
-      // Surface error back to DataInput rather than showing the animation
       const failStep = steps.find(s => s.status === 'error');
       setInputError(failStep?.detail || 'Validation failed. Check your input and try again.');
       return;
@@ -146,6 +177,12 @@ export default function App() {
             setPendingData(null);
             setInputError('');
             setView('input');
+          }}
+          onGoHome={() => {
+            setResults(null);
+            setPendingData(null);
+            setInputError('');
+            setView('landing');
           }}
         />
       );

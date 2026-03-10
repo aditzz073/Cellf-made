@@ -8,14 +8,11 @@ import logging
 
 import pandas as pd
 
+from config import GENE_PANEL as REQUIRED_GENES
+
 logger = logging.getLogger(__name__)
 
 REQUIRED_COLUMNS: set[str] = {"Gene", "Expression"}
-
-REQUIRED_GENES: list[str] = [
-    "IL6", "TLR4", "HLA-DRA", "STAT3", "TNF",
-    "CXCL8", "CD14", "MMP8", "LBP", "PCSK9",
-]
 
 # Log₂ expression values outside this range are flagged as suspicious
 EXPRESSION_RANGE: tuple[float, float] = (0.0, 20.0)
