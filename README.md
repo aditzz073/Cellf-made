@@ -192,79 +192,15 @@ PCSK9,0
 
 ---
 
-## Replacing the Placeholder Model
+## Generating the Model
 
-The application ships with a **biology-informed placeholder** that computes risk from a weighted linear combination of pro-inflammatory and immune-regulation genes. This produces plausible outputs for development and UI testing, but is **not trained on real patient data**.
-
-### Step-by-step model replacement
-
-#### 1 — Train your scikit-learn model
-
-```python
-from sklearn.ensemble import RandomForestClassifier
-import pickle
-
-# X: shape (n_samples, 10)  — columns must match FEATURE_ORDER below
-# y: 0 = no sepsis, 1 = sepsis
-FEATURE_ORDER = ["IL6", "TLR4", "HLA-DRA", "STAT3", "TNF",
-                 "CXCL8", "CD14", "MMP8", "LBP", "PCSK9"]
-
-model = RandomForestClassifier(n_estimators=300, random_state=42)
-model.fit(X_train[FEATURE_ORDER], y_train)
-```
-
-#### 2 — Save the model
-
-```python
-with open("backend/models/sepsis_model.pkl", "wb") as f:
-    pickle.dump(model, f)
-```
-
-The model loader will automatically detect the file on next server start.
-
-#### 3 — Verify the feature order
-
-Open `backend/services/model_loader.py` and confirm `FEATURE_ORDER` matches your training column order exactly:
-
-```python
-FEATURE_ORDER: list[str] = [
-    "IL6", "TLR4", "HLA-DRA", "STAT3", "TNF",
-    "CXCL8", "CD14", "MMP8", "LBP", "PCSK9",
-]
-```
-
-#### 4 — Restart the backend
+Run `main.py` from the root of the repository to train the model and generate the `.pkl` files:
 
 ```bash
-uvicorn app:app --reload
+python main.py
 ```
 
-The startup log will confirm your model is loaded:
-```
-INFO  | services.model_loader | Trained model loaded from models/sepsis_model.pkl
-```
-
-#### 5 — Replace explainability with real SHAP values (optional)
-
-Install SHAP:
-```bash
-pip install shap
-```
-
-Then update `backend/services/explainability.py` — replace `get_gene_impacts()` with the SHAP block documented at the top of that file.
-
----
-
-### Model requirements
-
-Your trained model must implement the scikit-learn estimator interface:
-
-| Method | Signature | Description |
-|--------|-----------|-------------|
-| `predict_proba` | `(X: ndarray) → ndarray shape (n, 2)` | Class probabilities — column 1 = sepsis probability |
-| `predict` | `(X: ndarray) → ndarray shape (n,)` | Binary class labels |
-
-Any `sklearn` classifier works: `RandomForestClassifier`, `GradientBoostingClassifier`, `XGBClassifier`, `LogisticRegression`, etc.
+This will produce `sepsis_rf_model.pkl` and `sepsis_scaler.pkl` which the backend loads automatically on startup.
 
 ---
 
