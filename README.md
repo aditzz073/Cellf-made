@@ -1,0 +1,297 @@
+# Cellf-made — SepsisAI
+
+> **AI-Powered Sepsis Risk Prediction from Immune Transcriptomic Data**
+
+A research-grade full-stack web application for early sepsis detection using gene expression profiling and machine learning. Combines a FastAPI backend with a React clinical dashboard to deliver risk scores, per-gene explainability, interactive heatmaps, and downloadable PDF reports.
+
+> ⚠️ **Research Use Only.** Not validated for clinical diagnosis or treatment decisions.
+
+---
+
+## Problem Statement
+
+Sepsis is a life-threatening medical emergency caused by a dysregulated immune response to infection. Despite being one of the leading causes of ICU mortality worldwide, it is typically diagnosed only after observable signs of organ dysfunction emerge — by which point the intervention window has often narrowed.
+
+**Cellf-made** moves detection upstream by targeting the molecular changes that *drive* that cascade, not the symptoms it produces.
+
+---
+
+## System Architecture
+
+```
+React Frontend  (Vite · Axios · Plotly.js)
+      │
+      │  REST API  (localhost:8000)
+      ▼
+FastAPI Backend
+      │
+      ├── Data Validation          utils/validation.py
+      ├── Gene Expression Parser   routes/predict.py
+      ├── Preprocessing Layer      services/predictor.py
+      ├── ML Prediction Service    services/model_loader.py  ← swap here
+      ├── Explainability Service   services/explainability.py
+      ├── Heatmap Generator        services/heatmap_generator.py
+      └── PDF Report Generator     utils/pdf_generator.py
+```
+
+---
+
+## Project Structure
+
+```
+Cellf-made/
+├── backend/
+│   ├── app.py                     # FastAPI entry point, CORS, router registration
+│   ├── requirements.txt
+│   ├── models/
+│   │   └── sepsis_model.pkl       # ← drop your trained model here
+│   ├── routes/
+│   │   ├── predict.py             # GET /template · POST /predict
+│   │   ├── explain.py             # GET|POST /explain · GET|POST /heatmap
+│   │   └── report.py              # POST /generate-report
+│   ├── services/
+│   │   ├── model_loader.py        # loads .pkl or activates PlaceholderModel
+│   │   ├── predictor.py           # risk score + classification
+│   │   ├── explainability.py      # mock-SHAP feature importances
+│   │   └── heatmap_generator.py   # seaborn heatmap → base-64 PNG
+│   └── utils/
+│       ├── validation.py          # CSV DataFrame validation
+│       └── pdf_generator.py       # ReportLab clinical PDF
+└── frontend/
+    ├── vite.config.js             # dev proxy: /api → localhost:8000
+    └── src/
+        ├── App.jsx                # view state machine
+        ├── services/api.js        # Axios API layer
+        └── components/
+            ├── LandingPage.jsx
+            ├── DataInput.jsx      # 3-tab: Upload / Manual / Paste
+            ├── ValidationStatus.jsx
+            ├── LoadingScreen.jsx
+            ├── ResultsDashboard.jsx
+            ├── RiskCard.jsx
+            ├── GeneTable.jsx
+            ├── HeatmapViewer.jsx  # Plotly.js interactive heatmap
+            ├── ManualInputForm.jsx
+            ├── PasteCSV.jsx
+            ├── CSVUpload.jsx
+            └── ReportDownload.jsx
+```
+
+---
+
+## API Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/template` | Download gene-expression CSV template |
+| `POST` | `/predict` | Sepsis risk prediction (CSV upload or JSON) |
+| `GET` | `/explain` | Gene feature importances (demo data) |
+| `POST` | `/explain` | Gene feature importances (patient data) |
+| `GET` | `/heatmap` | Expression heatmap image (demo data) |
+| `POST` | `/heatmap` | Expression heatmap image (patient data) |
+| `POST` | `/generate-report` | Generate downloadable PDF clinical report |
+| `GET` | `/health` | Service health check |
+| `GET` | `/docs` | Interactive Swagger UI |
+
+---
+
+## Local Setup
+
+### Prerequisites
+
+- Python 3.10+
+- Node.js 18+
+- npm 9+
+
+---
+
+### 1 — Clone & enter the repo
+
+```bash
+git clone <your-repo-url>
+cd Cellf-made
+```
+
+### 2 — Backend setup
+
+```bash
+cd backend
+
+# Create and activate a virtual environment (recommended)
+python3 -m venv .venv
+source .venv/bin/activate        # macOS / Linux
+# .venv\Scripts\activate.bat     # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Start the API server
+uvicorn app:app --reload
+```
+
+The API will be available at `http://localhost:8000`.  
+Interactive docs: `http://localhost:8000/docs`
+
+---
+
+### 3 — Frontend setup
+
+In a second terminal:
+
+```bash
+cd frontend
+
+npm install
+npm run dev
+```
+
+Open `http://localhost:5173` in your browser.
+
+> The Vite dev server proxies all `/api/*` requests to `http://localhost:8000`, so CORS is transparent during development.
+
+---
+
+### 4 — Verify the stack
+
+1. Backend running → visit `http://localhost:8000/health` → should return `{"status": "healthy"}`
+2. Frontend running → visit `http://localhost:5173` → landing page loads
+3. Upload or enter gene data → results dashboard appears with risk score, gene table, heatmap
+4. Click **Download Clinical Report** → PDF downloads
+
+---
+
+## CSV Template Format
+
+```csv
+Gene,Expression
+IL6,0
+TLR4,0
+HLA-DRA,0
+STAT3,0
+TNF,0
+CXCL8,0
+CD14,0
+MMP8,0
+LBP,0
+PCSK9,0
+```
+
+- Values should be **log₂-transformed** expression measurements
+- Valid range: `0.0` – `20.0`
+- Download the template directly from the app: **Upload CSV → Download Template**
+
+---
+
+## How It Works
+
+1. **Sample Collection** — A blood sample is drawn from the patient.
+2. **Transcriptomic Profiling** — Immune cell gene expression measured across a 10-gene panel.
+3. **AI-Driven Analysis** — ML model evaluates the expression profile against patterns from labelled sepsis datasets.
+4. **Risk Stratification** — Quantitative risk score (0–100%) with per-gene SHAP-style explainability.
+5. **Clinical Report** — Structured PDF report for research documentation.
+
+---
+
+## Replacing the Placeholder Model
+
+The application ships with a **biology-informed placeholder** that computes risk from a weighted linear combination of pro-inflammatory and immune-regulation genes. This produces plausible outputs for development and UI testing, but is **not trained on real patient data**.
+
+### Step-by-step model replacement
+
+#### 1 — Train your scikit-learn model
+
+```python
+from sklearn.ensemble import RandomForestClassifier
+import pickle
+
+# X: shape (n_samples, 10)  — columns must match FEATURE_ORDER below
+# y: 0 = no sepsis, 1 = sepsis
+FEATURE_ORDER = ["IL6", "TLR4", "HLA-DRA", "STAT3", "TNF",
+                 "CXCL8", "CD14", "MMP8", "LBP", "PCSK9"]
+
+model = RandomForestClassifier(n_estimators=300, random_state=42)
+model.fit(X_train[FEATURE_ORDER], y_train)
+```
+
+#### 2 — Save the model
+
+```python
+with open("backend/models/sepsis_model.pkl", "wb") as f:
+    pickle.dump(model, f)
+```
+
+The model loader will automatically detect the file on next server start.
+
+#### 3 — Verify the feature order
+
+Open `backend/services/model_loader.py` and confirm `FEATURE_ORDER` matches your training column order exactly:
+
+```python
+FEATURE_ORDER: list[str] = [
+    "IL6", "TLR4", "HLA-DRA", "STAT3", "TNF",
+    "CXCL8", "CD14", "MMP8", "LBP", "PCSK9",
+]
+```
+
+#### 4 — Restart the backend
+
+```bash
+uvicorn app:app --reload
+```
+
+The startup log will confirm your model is loaded:
+```
+INFO  | services.model_loader | Trained model loaded from models/sepsis_model.pkl
+```
+
+#### 5 — Replace explainability with real SHAP values (optional)
+
+Install SHAP:
+```bash
+pip install shap
+```
+
+Then update `backend/services/explainability.py` — replace `get_gene_impacts()` with the SHAP block documented at the top of that file.
+
+---
+
+### Model requirements
+
+Your trained model must implement the scikit-learn estimator interface:
+
+| Method | Signature | Description |
+|--------|-----------|-------------|
+| `predict_proba` | `(X: ndarray) → ndarray shape (n, 2)` | Class probabilities — column 1 = sepsis probability |
+| `predict` | `(X: ndarray) → ndarray shape (n,)` | Binary class labels |
+
+Any `sklearn` classifier works: `RandomForestClassifier`, `GradientBoostingClassifier`, `XGBClassifier`, `LogisticRegression`, etc.
+
+---
+
+## Impact
+
+| Outcome | Effect |
+|---|---|
+| Earlier intervention | Antibiotics and fluids administered before organ stress begins |
+| Reduced organ failure | Catching the immune response early limits downstream damage |
+| Lower mortality | Faster, more targeted treatment improves survival rates |
+| Shorter ICU stays | Early management reduces disease severity and length of admission |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, Vite 5, Axios, Plotly.js |
+| Backend | Python 3.10+, FastAPI, Uvicorn |
+| ML | scikit-learn (placeholder → real model) |
+| Visualisation | Plotly.js (frontend), Seaborn/Matplotlib (backend PDF) |
+| PDF | ReportLab |
+| Validation | Pydantic v2 |
+
+---
+
+## Status
+
+Active development. Placeholder model is functional. Real model integration pending dataset labelling.
