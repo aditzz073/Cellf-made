@@ -262,7 +262,7 @@ export default function LandingPage({ onStart, onLogin, onSignup, onProfile }) {
       <footer className="bg-navy-900 py-8">
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2.5">
-            <span className="text-lg">🧬</span>
+            <img src="/dna.png" alt="SepsisAI" className="w-6 h-6 object-contain" />
             <span className="font-bold text-white">SepsisAI</span>
             <span className="text-blue-300 text-xs ml-1">Research Preview</span>
           </div>

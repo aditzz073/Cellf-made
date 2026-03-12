@@ -5,23 +5,13 @@
 
 import React from 'react';
 
-const DNA_ICON = (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M2 15c6.667-6 13.333 0 20-6" />
-    <path d="M2 9c6.667 6 13.333 0 20 6" />
-    <path d="M5 12H2M22 12h-3" />
-    <path d="M5 8.5H2M22 15.5h-3" />
-    <path d="M5 15.5H2M22 8.5h-3" />
-  </svg>
-);
-
 export default function Header() {
   return (
     <header style={styles.header}>
       <div className="page-container" style={styles.inner}>
         {/* Branding */}
         <div style={styles.brand}>
-          <span style={styles.brandIcon}>{DNA_ICON}</span>
+          <img src="/dna.png" alt="SepsisAI" style={styles.brandIcon} />
           <div>
             <span style={styles.brandName}>SepsisAI</span>
             <span style={styles.brandTag}>Gene Expression Risk Prediction</span>
@@ -75,9 +65,9 @@ const styles = {
     gap: '0.85rem',
   },
   brandIcon: {
-    color: '#14b8a6',
-    display: 'flex',
-    alignItems: 'center',
+    width: '32px',
+    height: '32px',
+    objectFit: 'contain',
   },
   brandName: {
     display: 'block',

@@ -34,7 +34,7 @@ export default function Navbar({ onLogin, onSignup, onProfile, onGoHome }) {
           onClick={onGoHome}
           className="flex items-center gap-2.5 shrink-0 group mr-2"
         >
-          <span className="text-xl">🧬</span>
+          <img src="/dna.png" alt="SepsisAI" className="w-7 h-7 object-contain" />
           <span className="font-bold text-navy-700 text-lg tracking-tight group-hover:text-blue-700 transition-colors">
             SepsisAI
           </span>

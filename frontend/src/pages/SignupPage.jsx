@@ -70,7 +70,7 @@ export default function SignupPage({ onSuccess, onGoLogin, onGoHome }) {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <button onClick={onGoHome} className="flex items-center gap-2.5 group">
-            <span className="text-xl">🧬</span>
+            <img src="/dna.png" alt="SepsisAI" className="w-6 h-6 object-contain" />
             <span className="font-bold text-navy-700 text-lg tracking-tight group-hover:text-blue-700 transition-colors">SepsisAI</span>
           </button>
           <span className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-full">
@@ -84,7 +84,7 @@ export default function SignupPage({ onSuccess, onGoLogin, onGoHome }) {
 
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-14 h-14 bg-navy-700 rounded-2xl shadow-lg mb-4">
-              <span className="text-2xl">🧬</span>
+              <img src="/dna.png" alt="SepsisAI" className="w-9 h-9 object-contain" />
             </div>
             <h1 className="text-2xl font-bold text-navy-700 mb-1">Create account</h1>
             <p className="text-slate-500 text-sm">Start predicting sepsis risk with AI</p>

@@ -81,7 +81,7 @@ export default function ProfilePage({ onBack }) {
             </button>
             <span className="text-slate-200">|</span>
             <div className="flex items-center gap-2.5">
-              <span className="text-xl">🧬</span>
+              <img src="/dna.png" alt="SepsisAI" className="w-6 h-6 object-contain" />
               <span className="font-bold text-navy-700 text-lg tracking-tight">SepsisAI</span>
             </div>
           </div>

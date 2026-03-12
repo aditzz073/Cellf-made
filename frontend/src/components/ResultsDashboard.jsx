@@ -75,7 +75,7 @@ export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
 
           {/* Center: logo */}
           <div className="hidden sm:flex items-center gap-2">
-            <span className="text-lg">🧬</span>
+            <img src="/dna.png" alt="SepsisAI" className="w-5 h-5 object-contain" />
             <span className="font-bold text-navy-700 text-base">SepsisAI</span>
             <div className="w-px h-4 bg-slate-200 mx-1" />
             <span className="text-xs text-slate-400 font-mono">

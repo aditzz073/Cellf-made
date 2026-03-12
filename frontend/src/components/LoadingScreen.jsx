@@ -29,7 +29,7 @@ export default function LoadingScreen() {
         {/* Logo block */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl border border-slate-200 shadow-md mb-4">
-            <span className="text-3xl">🧬</span>
+            <img src="/dna.png" alt="SepsisAI" className="w-10 h-10 object-contain" />
           </div>
           <h2 className="text-xl font-bold text-navy-700 mb-1">Transcriptomic Analysis</h2>
           <p className="text-sm text-slate-500">Running AI-powered sepsis risk prediction pipeline…</p>

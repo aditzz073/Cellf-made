@@ -38,7 +38,7 @@ export default function LoginPage({ onSuccess, onGoSignup, onGoHome }) {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
           <button onClick={onGoHome} className="flex items-center gap-2.5 group">
-            <span className="text-xl">🧬</span>
+            <img src="/dna.png" alt="SepsisAI" className="w-6 h-6 object-contain" />
             <span className="font-bold text-navy-700 text-lg tracking-tight group-hover:text-blue-700 transition-colors">SepsisAI</span>
           </button>
           <span className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1.5 rounded-full">
