@@ -35,13 +35,22 @@ export const API = {
   },
 
   /**
-   * POST /predict with a genes dictionary (JSON body)
-   * @param {{ [gene: string]: number }} genes
+   * POST /predict with a full feature dictionary (JSON body)
+   * @param {{ [feature: string]: number }} features
+   * @returns {Promise<PredictionResponse>}
+   */
+  async predictFromFeatures(features) {
+    const { data } = await http.post('/predict', { features });
+    return data;
+  },
+
+  /**
+   * Backward-compatible alias for older callers.
+   * @param {{ [feature: string]: number }} genes
    * @returns {Promise<PredictionResponse>}
    */
   async predictFromGenes(genes) {
-    const { data } = await http.post('/predict', { genes });
-    return data;
+    return this.predictFromFeatures(genes);
   },
 
   /**
@@ -50,7 +59,7 @@ export const API = {
   downloadTemplate() {
     const a = document.createElement('a');
     a.href = `${BASE}/template`;
-    a.download = 'gene_expression_template.csv';
+    a.download = 'geo_expression_template.csv';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

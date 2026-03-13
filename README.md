@@ -50,10 +50,10 @@ Cellf-made/
 │   │   ├── explain.py             # GET|POST /explain · GET|POST /heatmap
 │   │   └── report.py              # POST /generate-report
 │   ├── services/
-│   │   ├── model_loader.py        # loads .pkl or activates PlaceholderModel
-│   │   ├── predictor.py           # risk score + classification
-│   │   ├── explainability.py      # mock-SHAP feature importances
-│   │   └── heatmap_generator.py   # seaborn heatmap → base-64 PNG
+│   │   ├── model_loader.py        # loads RF model + scaler artifacts
+│   │   ├── predictor.py           # scaler -> model inference pipeline
+│   │   ├── explainability.py      # ranked feature impacts from model importances
+│   │   └── heatmap_generator.py   # top-feature heatmap -> base-64 PNG
 │   └── utils/
 │       ├── validation.py          # CSV DataFrame validation
 │       └── pdf_generator.py       # ReportLab clinical PDF
@@ -64,7 +64,7 @@ Cellf-made/
         ├── services/api.js        # Axios API layer
         └── components/
             ├── LandingPage.jsx
-            ├── DataInput.jsx      # 3-tab: Upload / Manual / Paste
+                  ├── DataInput.jsx      # 2-tab: Upload GEO CSV / Paste GEO CSV
             ├── ValidationStatus.jsx
             ├── LoadingScreen.jsx
             ├── ResultsDashboard.jsx
@@ -83,7 +83,7 @@ Cellf-made/
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/template` | Download gene-expression CSV template |
+| `GET` | `/template` | Download GEO wide-format CSV template |
 | `POST` | `/predict` | Sepsis risk prediction (CSV upload or JSON) |
 | `GET` | `/explain` | Gene feature importances (demo data) |
 | `POST` | `/explain` | Gene feature importances (patient data) |
@@ -155,7 +155,7 @@ Open `http://localhost:5173` in your browser.
 
 1. Backend running → visit `http://localhost:8000/health` → should return `{"status": "healthy"}`
 2. Frontend running → visit `http://localhost:5173` → landing page loads
-3. Upload or enter gene data → results dashboard appears with risk score, gene table, heatmap
+3. Upload or paste one-sample GEO expression data → results dashboard appears with risk score, top-feature table, heatmap
 4. Click **Download Clinical Report** → PDF downloads
 
 ---
@@ -163,31 +163,22 @@ Open `http://localhost:5173` in your browser.
 ## CSV Template Format
 
 ```csv
-Gene,Expression
-IL6,0
-TLR4,0
-HLA-DRA,0
-STAT3,0
-TNF,0
-CXCL8,0
-CD14,0
-MMP8,0
-LBP,0
-PCSK9,0
+SampleID,V1,V2,V3,...,V24840
+SAMPLE_001,0,0,0,...,0
 ```
 
-- Values should be **log₂-transformed** expression measurements
-- Valid range: `0.0` – `20.0`
-- Download the template directly from the app: **Upload CSV → Download Template**
+- Input must contain exactly **one sample row** per prediction request.
+- Header should include the full V-feature space expected by the trained scaler/model.
+- Download the template directly from the app: **Upload GEO CSV -> Download Template**
 
 ---
 
 ## How It Works
 
 1. **Sample Collection** — A blood sample is drawn from the patient.
-2. **Transcriptomic Profiling** — Immune cell gene expression measured across a 10-gene panel.
-3. **AI-Driven Analysis** — ML model evaluates the expression profile against patterns from labelled sepsis datasets.
-4. **Risk Stratification** — Quantitative risk score (0–100%) with per-gene SHAP-style explainability.
+2. **Transcriptomic Profiling** — Immune expression matrix is prepared as a full GEO-style feature vector (V1...Vn).
+3. **AI-Driven Analysis** — `StandardScaler` preprocessing is applied, then a trained Random Forest predicts sepsis probability.
+4. **Risk Stratification** — Quantitative risk score (0–100%) with ranked feature impact analysis.
 5. **Clinical Report** — Structured PDF report for research documentation.
 
 ---
@@ -221,7 +212,7 @@ This will produce `sepsis_rf_model.pkl` and `sepsis_scaler.pkl` which the backen
 |-------|-----------|
 | Frontend | React 18, Vite 5, Axios, Plotly.js |
 | Backend | Python 3.10+, FastAPI, Uvicorn |
-| ML | scikit-learn (placeholder → real model) |
+| ML | scikit-learn (Random Forest + StandardScaler artifacts) |
 | Visualisation | Plotly.js (frontend), Seaborn/Matplotlib (backend PDF) |
 | PDF | ReportLab |
 | Validation | Pydantic v2 |
@@ -230,4 +221,4 @@ This will produce `sepsis_rf_model.pkl` and `sepsis_scaler.pkl` which the backen
 
 ## Status
 
-Active development. Placeholder model is functional. Real model integration pending dataset labelling.
+Active development. Real trained model pipeline is integrated for GEO wide-format inference.

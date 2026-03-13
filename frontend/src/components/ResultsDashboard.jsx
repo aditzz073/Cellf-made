@@ -147,7 +147,7 @@ export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
                   { label: 'Risk Level',        value: finalRiskLevel,                                          color: finalRiskLevel === 'High' ? '#dc2626' : finalRiskLevel === 'Moderate' ? '#d97706' : '#16a34a' },
                   { label: 'Risk Score',        value: `${(finalRiskScore * 100).toFixed(1)}% (${finalRiskScore.toFixed(4)})`,  mono: true },
                   { label: 'Confidence',        value: finalConfidence != null ? `${Math.round(finalConfidence * 100)}%` : 'N/A', mono: true },
-                  { label: 'Genes Analyzed',    value: `${feature_importances.length} / 10` },
+                  { label: 'Top Features',      value: `${feature_importances.length}` },
                   { label: 'Model',             value: finalModelType },
                 ].map(({ label, value, mono, color }) => (
                   <div key={label} className="border-b border-slate-100 pb-2.5">
@@ -220,12 +220,12 @@ export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
 function ModelInfoPanel({ modelType, genesCount, modelInfo }) {
   const isPlaceholder = (modelType || '').toLowerCase().includes('placeholder');
   const specs = [
-    { label: 'Algorithm',      value: modelInfo?.algorithm      ?? (isPlaceholder ? 'Weighted Linear (placeholder)' : 'Random Forest Classifier') },
-    { label: 'Genes Used',     value: `${modelInfo?.genes_used  ?? genesCount} (10-gene panel)` },
+    { label: 'Algorithm',      value: modelInfo?.algorithm      ?? (isPlaceholder ? 'Placeholder' : 'Random Forest + StandardScaler') },
+    { label: 'Features Used',  value: `${modelInfo?.genes_used  ?? genesCount}` },
     { label: 'Dataset Source', value: modelInfo?.dataset_source ?? 'GEO Sepsis Dataset (GSE Cohorts)' },
-    { label: 'Explainability', value: modelInfo?.explainability ?? (isPlaceholder ? 'Mock SHAP-inspired' : 'SHAP TreeExplainer') },
+    { label: 'Explainability', value: modelInfo?.explainability ?? 'Model importance x normalized deviation' },
     { label: 'Output Type',    value: 'Probability [0–1] + risk classification' },
-    { label: 'Status',         value: isPlaceholder ? '⚠ Placeholder active' : '✓ Trained model active' },
+    { label: 'Status',         value: isPlaceholder ? 'Placeholder active' : 'Trained model active' },
   ];
 
   return (
@@ -247,10 +247,7 @@ function ModelInfoPanel({ modelType, genesCount, modelInfo }) {
       {isPlaceholder && (
         <div className="px-5 pb-5">
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-xs text-navy-700 leading-relaxed">
-            <strong>Integration:</strong> Drop a trained{' '}
-            <code className="bg-blue-100 px-1.5 py-0.5 rounded font-mono">sepsis_model.pkl</code> into{' '}
-            <code className="bg-blue-100 px-1.5 py-0.5 rounded font-mono">backend/models/</code>{' '}
-            and restart the server to activate the real model.
+            Place both model artifacts in backend/models and restart backend: sepsis_rf_model.pkl and sepsis_scaler.pkl.
           </div>
         </div>
       )}

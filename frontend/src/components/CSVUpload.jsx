@@ -65,7 +65,7 @@ export default function CSVUpload({ onFileSelected, selectedFile }) {
         gap: '0.5rem',
       }}>
         <span style={{ fontSize: '0.82rem', color: 'var(--color-navy)', fontWeight: 500 }}>
-          Need the expected format?
+          Need the GEO wide-format template?
         </span>
         <button
           type="button"
@@ -131,10 +131,10 @@ export default function CSVUpload({ onFileSelected, selectedFile }) {
           <div>
             <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', opacity: 0.6 }}>📂</div>
             <p style={{ fontWeight: 600, color: 'var(--color-navy)', fontSize: '0.95rem', marginBottom: '0.3rem' }}>
-              Drop your CSV file here
+              Drop your GEO expression CSV here
             </p>
             <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.75rem' }}>
-              or click to browse
+              one sample row with feature columns (V1...V24840)
             </p>
             <span style={{
               display: 'inline-block',

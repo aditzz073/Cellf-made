@@ -1,13 +1,10 @@
 import React, { useState } from 'react';
 import CSVUpload from './CSVUpload.jsx';
-import ManualInputForm, { emptyGenes, ALL_GENES } from './ManualInputForm.jsx';
 import PasteCSV from './PasteCSV.jsx';
-import { GENE_PANEL as REQUIRED_GENES } from '../constants.js';
 
 const TABS = [
-  { id: 'upload', label: 'Upload CSV',    icon: '📂' },
-  { id: 'manual', label: 'Manual Entry',  icon: '✏️' },
-  { id: 'paste',  label: 'Paste CSV',     icon: '📋' },
+  { id: 'upload', label: 'Upload GEO CSV', icon: '📂' },
+  { id: 'paste',  label: 'Paste GEO CSV',  icon: '📋' },
 ];
 
 /**
@@ -23,27 +20,12 @@ export default function DataInput({ onSubmit, onBack, externalError, onClearErro
   const [tab,           setTab]           = useState('upload');
   const [patientId,     setPatientId]     = useState('');
   const [selectedFile,  setSelectedFile]  = useState(null);
-  const [manualValues,  setManualValues]  = useState(emptyGenes());
-  const [pastedGenes,   setPastedGenes]   = useState(null);
-  const [fieldErrors,   setFieldErrors]   = useState({});
+  const [pastedFeatures, setPastedFeatures] = useState(null);
   const [submitError,   setSubmitError]   = useState('');
-
-  function validateManual(vals) {
-    const errs = {};
-    for (const gene of REQUIRED_GENES) {
-      const raw = vals[gene];
-      if (raw === '' || raw == null) { errs[gene] = 'required'; continue; }
-      const n = parseFloat(raw);
-      if (isNaN(n))         { errs[gene] = 'not a number'; continue; }
-      if (n < 0 || n > 20)  { errs[gene] = '0–20'; }
-    }
-    return errs;
-  }
 
   function handleSubmit(e) {
     e.preventDefault();
     setSubmitError('');
-    setFieldErrors({});
 
     if (tab === 'upload') {
       if (!selectedFile) { setSubmitError('Please select a CSV file.'); return; }
@@ -51,43 +33,24 @@ export default function DataInput({ onSubmit, onBack, externalError, onClearErro
       return;
     }
 
-    if (tab === 'manual') {
-      const errs = validateManual(manualValues);
-      if (Object.keys(errs).length) {
-        setFieldErrors(errs);
-        setSubmitError('Please fill in all gene values within the valid range (0–20).');
-        return;
-      }
-      const genes = Object.fromEntries(REQUIRED_GENES.map(g => [g, parseFloat(manualValues[g])]));
-      onSubmit({ type: 'genes', data: genes, patientId });
-      return;
-    }
-
     if (tab === 'paste') {
-      if (!pastedGenes || Object.keys(pastedGenes).length === 0) {
+      if (!pastedFeatures || Object.keys(pastedFeatures).length === 0) {
         setSubmitError('Please paste and parse your CSV data first.');
         return;
       }
-      const missing = REQUIRED_GENES.filter(g => !(g in pastedGenes));
-      if (missing.length) {
-        setSubmitError(`Missing required genes: ${missing.join(', ')}`);
-        return;
-      }
-      onSubmit({ type: 'genes', data: pastedGenes, patientId });
+      onSubmit({ type: 'features', data: pastedFeatures, patientId });
     }
   }
 
   function switchTab(id) {
     setTab(id);
     setSubmitError('');
-    setFieldErrors({});
     onClearError?.();
   }
 
   const isReady = (
     (tab === 'upload' && selectedFile != null) ||
-    (tab === 'manual' && ALL_GENES.every(g => manualValues[g] !== '' && manualValues[g] != null)) ||
-    (tab === 'paste'  && pastedGenes && Object.keys(pastedGenes).length >= 10)
+    (tab === 'paste'  && pastedFeatures && Object.keys(pastedFeatures).length > 0)
   );
 
   const errorMsg = submitError || externalError;
@@ -126,7 +89,7 @@ export default function DataInput({ onSubmit, onBack, externalError, onClearErro
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-navy-700 mb-1.5">Gene Expression Input</h2>
           <p className="text-sm text-slate-500">
-            Provide transcriptomic data for the 10-gene diagnostic panel using one of the methods below.
+            Provide one-sample GEO-format expression data with wide feature columns (for example, V1...V24840).
           </p>
         </div>
 
@@ -181,17 +144,10 @@ export default function DataInput({ onSubmit, onBack, externalError, onClearErro
               {tab === 'upload' && (
                 <CSVUpload onFileSelected={setSelectedFile} selectedFile={selectedFile} />
               )}
-              {tab === 'manual' && (
-                <ManualInputForm
-                  values={manualValues}
-                  errors={fieldErrors}
-                  onGenesChange={vals => { setManualValues(vals); setFieldErrors({}); }}
-                />
-              )}
               {tab === 'paste' && (
                 <PasteCSV
-                  onGenesChange={g => { setPastedGenes(g); setSubmitError(''); }}
-                  onClearGenes={() => setPastedGenes(null)}
+                  onFeaturesChange={g => { setPastedFeatures(g); setSubmitError(''); }}
+                  onClearFeatures={() => setPastedFeatures(null)}
                 />
               )}
             </div>

@@ -1,12 +1,13 @@
 import React from 'react';
-import { GENE_PANEL } from '../constants.js';
 import Navbar from './Navbar.jsx';
+
+const FEATURE_PREVIEW = ['V1', 'V2', 'V3', 'V10', 'V100', 'V1000', 'V5000', 'V10000', 'V20000', 'V24840'];
 
 const WORKFLOW = [
   {
     step: '01',
     title: 'Input Gene Data',
-    desc: 'Upload a CSV file or manually enter expression values for the 10-gene transcriptomic panel.',
+    desc: 'Upload or paste a one-sample GEO wide-format CSV with V-feature columns.',
   },
   {
     step: '02',
@@ -16,7 +17,7 @@ const WORKFLOW = [
   {
     step: '03',
     title: 'Risk Stratification',
-    desc: 'Receive a quantitative sepsis probability score with per-gene SHAP-inspired explainability.',
+    desc: 'Receive sepsis probability with ranked feature impacts for interpretation.',
   },
   {
     step: '04',
@@ -26,9 +27,9 @@ const WORKFLOW = [
 ];
 
 const SPECS = [
-  { icon: '🧬', label: '10-Gene Panel',       value: 'Transcriptomic signature' },
+  { icon: '🧬', label: 'Feature Space',       value: 'GEO V-columns (wide input)' },
   { icon: '📊', label: 'Risk Classes',         value: 'High · Moderate · Low' },
-  { icon: '🔬', label: 'Explainability',       value: 'SHAP feature importance' },
+  { icon: '🔬', label: 'Explainability',       value: 'Ranked feature impacts' },
   { icon: '📄', label: 'Report Output',        value: 'Interactive + PDF report' },
 ];
 
@@ -150,9 +151,9 @@ export default function LandingPage({ onStart, onLogin, onSignup, onProfile }) {
       <section className="bg-navy-700 py-4 border-b border-navy-800">
         <div className="max-w-6xl mx-auto px-6 flex flex-wrap justify-center gap-x-10 gap-y-2">
           {[
-            'Random Forest / Placeholder Model',
-            '10-Gene Diagnostic Panel',
-            'SHAP-inspired Explainability',
+            'Random Forest + StandardScaler',
+            'GEO Wide-Format Input',
+            'Ranked Feature Explainability',
             'GEO Sepsis Dataset',
             'PDF Clinical Report',
           ].map((item) => (
@@ -215,25 +216,24 @@ export default function LandingPage({ onStart, onLogin, onSignup, onProfile }) {
         </div>
       </section>
 
-      {/* ── Gene Panel ── */}
+      {/* ── Feature Space Preview ── */}
       <section id="about" className="py-14 bg-slate-50">
         <div className="max-w-6xl mx-auto px-6 text-center">
           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">
-            10-Gene Diagnostic Panel
+            GEO Feature Space (Preview)
           </p>
           <div className="flex flex-wrap gap-2.5 justify-center mb-6">
-            {GENE_PANEL.map((gene) => (
+            {FEATURE_PREVIEW.map((feature) => (
               <span
-                key={gene}
+                key={feature}
                 className="px-3.5 py-2 bg-white border border-slate-200 rounded-lg text-xs font-mono font-bold text-navy-700 shadow-sm hover:border-blue-300 hover:bg-blue-50 transition-all cursor-default"
               >
-                {gene}
+                {feature}
               </span>
             ))}
           </div>
           <p className="text-xs text-slate-400 max-w-lg mx-auto">
-            Literature-curated immune response genes: pro-inflammatory cytokines, pattern recognition receptors,
-            and regulatory markers for sepsis stratification.
+            The deployed model consumes a wide GEO-style feature matrix and applies scaler plus Random Forest inference.
           </p>
         </div>
       </section>
@@ -243,7 +243,7 @@ export default function LandingPage({ onStart, onLogin, onSignup, onProfile }) {
         <div className="max-w-2xl mx-auto px-6 text-center">
           <h2 className="text-2xl font-bold text-white mb-3">Ready to Analyze?</h2>
           <p className="text-blue-200 text-sm mb-8 leading-relaxed">
-            Upload gene expression data or enter values manually to generate a comprehensive
+            Upload or paste GEO-format expression data to generate a comprehensive
             sepsis risk prediction with explainable AI.
           </p>
           <button
@@ -268,7 +268,7 @@ export default function LandingPage({ onStart, onLogin, onSignup, onProfile }) {
           </div>
           <p className="text-blue-300 text-xs text-center leading-relaxed max-w-md">
             For research use only. Not validated for clinical diagnosis or treatment decisions.
-            Outputs are derived from a placeholder model until a trained model is loaded.
+            Outputs are generated from the trained Random Forest + StandardScaler pipeline.
           </p>
         </div>
       </footer>

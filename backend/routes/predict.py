@@ -1,15 +1,4 @@
-"""
-routes/predict.py
------------------
-Endpoints:
-  GET  /template  — download the gene-expression CSV template
-  POST /predict   — run sepsis risk prediction (CSV upload OR JSON body)
-
-The POST /predict endpoint returns a single comprehensive response that
-includes the prediction result, gene feature importances, and a base-64
-encoded heatmap, so the frontend can update the entire results panel in
-one round-trip.
-"""
+"""Prediction endpoints — accepts long-format GEO CSV or JSON feature dict."""
 
 import io
 import csv
@@ -20,47 +9,39 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, field_validator
 
-from config import GENE_PANEL
+from services.model_loader import get_top100_probes, is_model_ready
 from services.predictor import run_prediction
 from services.explainability import get_gene_impacts
 from services.heatmap_generator import generate_heatmap_image
-from utils.validation import validate_dataframe
+from utils.validation import validate_dataframe, extract_feature_values
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter()
 
 
 # ---------------------------------------------------------------------------
-# Request / response models
+# Request model (JSON path)
 # ---------------------------------------------------------------------------
 
-class ManualInputPayload(BaseModel):
-    """Payload model for manual gene-expression entry."""
+class FeatureInputPayload(BaseModel):
+    """JSON payload: top-100 probe expression values."""
 
-    genes: dict[str, float]
+    features: dict[str, float]
 
-    @field_validator("genes")
+    @field_validator("features")
     @classmethod
-    def genes_must_be_non_empty(cls, v: dict) -> dict:
+    def features_must_be_non_empty(cls, v: dict) -> dict:
         if not v:
-            raise ValueError("genes dictionary must not be empty.")
+            raise ValueError("features dictionary must not be empty.")
         return v
 
     model_config = {
         "json_schema_extra": {
             "example": {
-                "genes": {
-                    "IL6": 8.2,
-                    "TLR4": 6.1,
-                    "HLA-DRA": 1.3,
-                    "STAT3": 4.5,
-                    "TNF": 7.8,
-                    "CXCL8": 5.2,
-                    "CD14": 3.9,
-                    "MMP8": 6.4,
-                    "LBP": 5.1,
-                    "PCSK9": 2.3,
+                "features": {
+                    "226879_at": 7.231,
+                    "205844_at": -1.031,
+                    "227867_at": 0.448,
                 }
             }
         }
@@ -68,35 +49,46 @@ class ManualInputPayload(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# GET /template
+# GET /template  — long-format CSV download
 # ---------------------------------------------------------------------------
 
 @router.get(
     "/template",
     tags=["Data Input"],
-    summary="Download Gene-Expression CSV Template",
-    response_description="CSV file with gene names pre-filled and expression values set to 0.",
+    summary="Download GEO CSV Template",
+    response_description="Long-format CSV template with ProbeID and a sample column.",
 )
 async def download_template():
     """
-    Download a pre-formatted CSV template for gene expression data entry.
+    Download a long-format (probe-per-row) template compatible with the
+    trained scaler / model.
 
-    The returned file contains the required genes with placeholder expression
-    values of 0.  Users should replace the values with log₂-transformed
-    expression measurements from their assay before uploading via `/predict`.
+    Columns: ProbeID | Sample_001
+    Rows   : one row per top-100 biomarker probe
     """
+    top100 = get_top100_probes()
+    if not is_model_ready() or not top100:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Model artifacts are not loaded. Place sepsis_rf_model.pkl, "
+                "sepsis_scaler.pkl, and top100_biomarkers.json in backend/models/ "
+                "and restart the backend."
+            ),
+        )
+
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["Gene", "Expression"])
-    for gene in GENE_PANEL:
-        writer.writerow([gene, 0])
+    writer.writerow(["ProbeID", "Sample_001"])
+    for probe in top100:
+        writer.writerow([probe, 0.0])
     output.seek(0)
 
     return StreamingResponse(
         io.BytesIO(output.getvalue().encode("utf-8")),
         media_type="text/csv",
         headers={
-            "Content-Disposition": "attachment; filename=gene_expression_template.csv"
+            "Content-Disposition": "attachment; filename=geo_top100_template.csv"
         },
     )
 
@@ -110,33 +102,49 @@ async def download_template():
     tags=["Prediction"],
     summary="Run Sepsis Risk Prediction",
     response_description=(
-        "Comprehensive prediction envelope: risk score, level, confidence, "
-        "gene feature importances, and a base-64 heatmap PNG."
+        "Prediction response including risk score, ranked feature impacts, "
+        "and feature heatmap PNG (base-64)."
     ),
 )
 async def predict(request: Request):
     """
-    Run sepsis risk prediction from gene expression data.
+    Run sepsis risk prediction from GEO top-100 biomarker expression data.
 
-    **Accepts (mutually exclusive — detected via Content-Type):**
-    - `multipart/form-data` with a `file` field (CSV, columns: Gene · Expression).
-    - `application/json` body: ``{"genes": {"IL6": 8.2, ...}}``
+    **Accepts (multipart/form-data):**
+    - `file`: long-format CSV with columns `ProbeID` and at least one sample column.
+
+    **Accepts (application/json):**
+    - `{"features": {"226879_at": 7.23, "205844_at": -1.03, ...}}`
+      (must include all top-100 probe IDs)
 
     **Returns:**
     ```json
     {
-      "prediction": { "risk_score": 0.82, "risk_level": "High", "confidence": 0.91, "model_type": "placeholder" },
-      "feature_importances": [ { "gene": "IL6", "impact": 0.24, ... }, ... ],
-      "heatmap_base64": "<PNG encoded as base-64>",
-      "genes": { "IL6": 8.2, ... }
+      "prediction":          { "risk_score": 0.82, "risk_level": "High", ... },
+      "feature_importances": [ { "gene": "226879_at", "impact": 0.14, ... }, ... ],
+      "heatmap_base64":      "<PNG base-64>",
+      "features":            { "226879_at": 7.23, ... },
+      "model_info":          { ... }
     }
     ```
     """
-    content_type = request.headers.get("content-type", "")
-    gene_values: dict[str, float] = {}
+    if not is_model_ready():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Model artifacts are unavailable. Place sepsis_rf_model.pkl, "
+                "sepsis_scaler.pkl, and top100_biomarkers.json in backend/models/ "
+                "and restart the backend."
+            ),
+        )
 
+    content_type = request.headers.get("content-type", "")
+    feature_values: dict[str, float] = {}
+
+    # ------------------------------------------------------------------
+    # CSV upload path
+    # ------------------------------------------------------------------
     if "multipart/form-data" in content_type:
-        # ── CSV file-upload branch ───────────────────────────────────────────
         form = await request.form()
         file = form.get("file")
         if file is None:
@@ -147,11 +155,14 @@ async def predict(request: Request):
         if not (getattr(file, "filename", "") or "").lower().endswith(".csv"):
             raise HTTPException(
                 status_code=400,
-                detail="Invalid file type.  Only .csv files are accepted.",
+                detail="Invalid file type. Only .csv files are accepted.",
             )
         try:
             contents = await file.read()
             df = pd.read_csv(io.BytesIO(contents))
+            # Normalise column names: treat "Expression" as the sample column
+            if "Expression" in df.columns:
+                df = df.rename(columns={"Expression": "Sample_001"})
         except Exception as exc:
             logger.error("CSV parse error: %s", exc)
             raise HTTPException(
@@ -160,18 +171,14 @@ async def predict(request: Request):
 
         errors = validate_dataframe(df)
         if errors:
-            raise HTTPException(
-                status_code=422, detail={"validation_errors": errors}
-            )
+            raise HTTPException(status_code=422, detail={"validation_errors": errors})
 
-        df.columns = df.columns.str.strip()
-        df["Gene"] = df["Gene"].astype(str).str.strip()
-        gene_values = dict(
-            zip(df["Gene"], pd.to_numeric(df["Expression"]).astype(float))
-        )
+        feature_values = extract_feature_values(df)
 
+    # ------------------------------------------------------------------
+    # JSON path
+    # ------------------------------------------------------------------
     elif "application/json" in content_type:
-        # ── JSON body branch ─────────────────────────────────────────────────
         try:
             body = await request.json()
         except Exception as exc:
@@ -180,46 +187,54 @@ async def predict(request: Request):
             ) from exc
 
         try:
-            payload = ManualInputPayload(**body)
+            payload = FeatureInputPayload(**body)
         except Exception as exc:
             raise HTTPException(
                 status_code=422, detail=f"Invalid payload: {exc}"
             ) from exc
 
-        gene_values = payload.genes
+        feature_values = payload.features
 
     else:
         raise HTTPException(
             status_code=400,
             detail=(
-                "No input provided or unsupported Content-Type.  "
-                "Send a CSV file as multipart/form-data or a JSON body "
-                "(application/json) with a 'genes' key."
+                "No input provided or unsupported Content-Type. "
+                "Send a long-format CSV via multipart/form-data or a JSON body "
+                "(application/json) with a 'features' key."
             ),
         )
 
-    # ── Run prediction pipeline ─────────────────────────────────────────────
-    prediction = run_prediction(gene_values)
-    feature_importances = get_gene_impacts(gene_values)
-    heatmap_b64 = generate_heatmap_image(gene_values)
+    # ------------------------------------------------------------------
+    # Inference
+    # ------------------------------------------------------------------
+    try:
+        prediction = run_prediction(feature_values)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    feature_importances = get_gene_impacts(feature_values, top_n=20)
+    heatmap_b64 = generate_heatmap_image(feature_values, feature_importances)
 
     logger.info(
-        "Prediction complete — risk_level=%s risk_score=%.4f genes=%d",
+        "Prediction complete — risk_level=%s risk_score=%.4f probes=%d",
         prediction["risk_level"],
         prediction["risk_score"],
-        len(gene_values),
+        len(feature_values),
     )
 
     return {
         "prediction": prediction,
         "feature_importances": feature_importances,
         "heatmap_base64": heatmap_b64,
-        "genes": gene_values,
+        "features": feature_values,
         "model_info": {
-            "algorithm": "Weighted Linear Placeholder" if prediction.get("model_type") == "placeholder" else "Random Forest Classifier",
-            "genes_used": len(GENE_PANEL),
-            "dataset_source": "GEO Sepsis Dataset (GSE Cohorts)",
-            "explainability": "Mock SHAP-inspired scores" if prediction.get("model_type") == "placeholder" else "SHAP TreeExplainer",
-            "model_status": prediction.get("model_type", "placeholder"),
+            "algorithm": "Random Forest (200 trees) + StandardScaler",
+            "top_biomarkers": len(get_top100_probes()),
+            "dataset_source": "GEO Sepsis Dataset (Affymetrix microarray)",
+            "explainability": "RF feature_importances × normalised expression delta",
+            "model_status": prediction.get("model_type", "unknown"),
         },
     }

@@ -51,16 +51,10 @@ class ReportPayload(BaseModel):
             "example": {
                 "patient_id": "PT-00421",
                 "genes": {
-                    "IL6": 8.2,
-                    "TLR4": 6.1,
-                    "HLA-DRA": 1.3,
-                    "STAT3": 4.5,
-                    "TNF": 7.8,
-                    "CXCL8": 5.2,
-                    "CD14": 3.9,
-                    "MMP8": 6.4,
-                    "LBP": 5.1,
-                    "PCSK9": 2.3,
+                    "V1": 7.231,
+                    "V2": -1.031,
+                    "V3": 0.448,
+                    "V4": 5.102,
                 },
                 "prediction": {
                     "risk_score": 0.82,

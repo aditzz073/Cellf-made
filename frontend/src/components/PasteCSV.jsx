@@ -1,61 +1,72 @@
 import React, { useState } from 'react';
 
-const REQUIRED_GENES = ['IL6', 'TLR4', 'HLA-DRA', 'STAT3', 'TNF', 'CXCL8', 'CD14', 'MMP8', 'LBP', 'PCSK9'];
-
-const PLACEHOLDER = `Gene,Expression
-IL6,9.1
-TLR4,7.3
-HLA-DRA,1.8
-STAT3,4.2
-TNF,8.6
-CXCL8,7.9
-CD14,2.3
-MMP8,8.1
-LBP,7.5
-PCSK9,1.2`;
+const PLACEHOLDER = `SampleID,V1,V2,V3,V4,V5
+SAMPLE_001,7.231,-1.031,0.448,5.102,2.778`;
 
 /**
- * Parses a two-column CSV text (Gene,Expression) into a { gene: value } map.
- * Returns { genes: {}, errors: [] }
+ * Parses a wide CSV text (header + one sample row) into a { feature: value } map.
+ * Returns { features: {}, errors: [] }
  */
 function parseCSVText(text) {
   const errors = [];
-  const genes = {};
-  const lines = text.trim().split(/\r?\n/);
-  const start = lines[0]?.toLowerCase().includes('gene') ? 1 : 0;
+  const features = {};
+  const lines = text
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
 
-  for (let i = start; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const parts = line.split(',');
-    if (parts.length < 2) {
-      errors.push(`Line ${i + 1}: expected two comma-separated values`);
-      continue;
-    }
-    const gene = parts[0].trim();
-    const val  = parseFloat(parts[1].trim());
-    if (!gene) { errors.push(`Line ${i + 1}: empty gene name`); continue; }
-    if (isNaN(val)) { errors.push(`Line ${i + 1}: "${parts[1]}" is not a number`); continue; }
-    if (val < 0 || val > 20) { errors.push(`Line ${i + 1}: value ${val} out of range [0, 20]`); continue; }
-    genes[gene] = val;
+  if (lines.length < 2) {
+    errors.push('CSV must include a header row and one sample data row.');
+    return { features, errors };
   }
 
-  const missing = REQUIRED_GENES.filter(g => !(g in genes));
-  if (missing.length) errors.push(`Missing required genes: ${missing.join(', ')}`);
+  if (lines.length > 2) {
+    errors.push('Only one sample row is supported per prediction.');
+  }
 
-  return { genes, errors };
+  const header = lines[0].split(',').map((h) => h.trim());
+  const row = (lines[1] || '').split(',').map((v) => v.trim());
+
+  if (row.length !== header.length) {
+    errors.push(
+      `Header has ${header.length} column(s) but data row has ${row.length} value(s).`
+    );
+    return { features, errors };
+  }
+
+  const featureColumns = header.filter((column) => /^V\d+$/i.test(column));
+  if (featureColumns.length === 0) {
+    errors.push('No V-feature columns detected (expected columns like V1, V2, V3...).');
+    return { features, errors };
+  }
+
+  for (let idx = 0; idx < header.length; idx += 1) {
+    const column = header[idx];
+    if (!/^V\d+$/i.test(column)) continue;
+
+    const raw = row[idx];
+    const value = Number(raw);
+    if (!Number.isFinite(value)) {
+      errors.push(`Column ${column}: value "${raw}" is not numeric.`);
+      continue;
+    }
+    features[column] = value;
+  }
+
+  return { features, errors };
 }
 
 /**
  * PasteCSV — textarea for pasting raw CSV data, with live parse preview.
  *
  * Props:
- *   onGenesChange({ [gene]: number }) — called when a valid parse succeeds
- *   onClearGenes()                    — called when pasted text is cleared
+ *   onFeaturesChange({ [feature]: number }) — called when a valid parse succeeds
+ *   onClearFeatures()                      — called when pasted text is cleared
  */
-export default function PasteCSV({ onGenesChange, onClearGenes }) {
+export default function PasteCSV({ onFeaturesChange, onClearFeatures }) {
   const [text, setText]     = useState('');
-  const [parsed, setParsed] = useState(null); // { genes, errors } | null
+  const [parsed, setParsed] = useState(null); // { features, errors } | null
   const [hasRun, setHasRun] = useState(false);
 
   function handleParse() {
@@ -64,9 +75,9 @@ export default function PasteCSV({ onGenesChange, onClearGenes }) {
     setParsed(result);
     setHasRun(true);
     if (!result.errors.length) {
-      onGenesChange(result.genes);
+      onFeaturesChange(result.features);
     } else {
-      onClearGenes?.();
+      onClearFeatures?.();
     }
   }
 
@@ -74,7 +85,7 @@ export default function PasteCSV({ onGenesChange, onClearGenes }) {
     setText('');
     setParsed(null);
     setHasRun(false);
-    onClearGenes?.();
+    onClearFeatures?.();
   }
 
   const isValid = hasRun && parsed && !parsed.errors.length;
@@ -91,8 +102,7 @@ export default function PasteCSV({ onGenesChange, onClearGenes }) {
         fontSize: '0.82rem',
         color: 'var(--color-navy)',
       }}>
-        Paste a CSV with two columns: <code style={{ fontSize: '0.78rem' }}>Gene</code> and <code style={{ fontSize: '0.78rem' }}>Expression</code>.
-        The header row is optional.
+        Paste a wide GEO-style CSV with one sample row and feature columns like V1, V2, V3, ...
       </div>
 
       {/* Textarea */}
@@ -100,7 +110,7 @@ export default function PasteCSV({ onGenesChange, onClearGenes }) {
         className="form-input"
         rows={12}
         value={text}
-        onChange={e => { setText(e.target.value); setHasRun(false); onClearGenes?.(); }}
+        onChange={e => { setText(e.target.value); setHasRun(false); onClearFeatures?.(); }}
         placeholder={PLACEHOLDER}
         spellCheck={false}
         style={{ minHeight: 220 }}
@@ -138,9 +148,9 @@ export default function PasteCSV({ onGenesChange, onClearGenes }) {
           ) : (
             <div className="alert alert-success">
               <div>
-                <strong>✓ {Object.keys(parsed.genes).length} genes parsed successfully</strong>
+                <strong>✓ {Object.keys(parsed.features).length} features parsed successfully</strong>
                 <div style={{ marginTop: '0.75rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                  {Object.entries(parsed.genes).map(([g, v]) => (
+                  {Object.entries(parsed.features).slice(0, 12).map(([g, v]) => (
                     <span key={g} style={{
                       background: 'rgba(22,163,74,0.08)',
                       border: '1px solid rgba(22,163,74,0.25)',
@@ -150,10 +160,15 @@ export default function PasteCSV({ onGenesChange, onClearGenes }) {
                       fontFamily: 'var(--font-mono)',
                       color: 'var(--color-risk-low)',
                     }}>
-                      {g}: {v.toFixed(2)}
+                      {g}: {v.toFixed(3)}
                     </span>
                   ))}
                 </div>
+                {Object.keys(parsed.features).length > 12 && (
+                  <p style={{ marginTop: '0.6rem', fontSize: '0.74rem', color: 'var(--color-text-muted)' }}>
+                    Showing first 12 features only.
+                  </p>
+                )}
               </div>
             </div>
           )}

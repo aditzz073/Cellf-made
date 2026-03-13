@@ -1,99 +1,92 @@
-"""
-services/explainability.py
---------------------------
-Provides gene-level feature importance scores.
-
-Current implementation:  mock SHAP-inspired values that scale with the
-magnitude of deviation from a healthy reference baseline.
-
-SHAP integration guide
-----------------------
-Once the trained model is available, replace the body of get_gene_impacts()
-with:
-
-    import shap
-    from services.model_loader import load_model, FEATURE_ORDER
-
-    _model, _ = load_model()
-    _explainer  = shap.TreeExplainer(_model)   # or shap.Explainer(_model)
-
-    def get_gene_impacts(gene_values):
-        X = np.array([gene_values.get(g, 0.0) for g in FEATURE_ORDER]).reshape(1, -1)
-        shap_values = _explainer.shap_values(X)[1]  # class-1 (sepsis) SHAP values
-        return [
-            {"gene": g, "impact": float(s), "expression": gene_values.get(g, 0.0),
-             "baseline": REFERENCE_BASELINE.get(g)}
-            for g, s in sorted(zip(FEATURE_ORDER, shap_values), key=lambda t: abs(t[1]), reverse=True)
-        ]
-"""
+"""Feature impact estimation using top-100 RF biomarker importances."""
 
 import logging
-import math
 from typing import Optional
 
-from config import REFERENCE_BASELINE
+import numpy as np
+
+from services.model_loader import get_model_bundle
 
 logger = logging.getLogger(__name__)
 
-# Base directional weights:  positive → risk-increasing,  negative → protective
-_BASE_IMPACTS: dict[str, float] = {
-    "IL6":     +0.24,
-    "TNF":     +0.20,
-    "TLR4":    +0.18,
-    "CXCL8":   +0.15,
-    "MMP8":    +0.12,
-    "LBP":     +0.09,
-    "PCSK9":   +0.07,
-    "HLA-DRA": -0.22,
-    "STAT3":   -0.10,
-    "CD14":    -0.06,
-}
+_model, _scaler, _top100, _is_ready = get_model_bundle()
+
+
+def _get_importance_weights() -> np.ndarray:
+    """Return the RF feature importances for the top-100 probes (indexed same order)."""
+    if _model is None or not hasattr(_model, "feature_importances_"):
+        return np.ones(len(_top100), dtype=float)
+
+    scaler_features = list(getattr(_scaler, "feature_names_in_", []))
+    if not scaler_features:
+        return np.ones(len(_top100), dtype=float)
+
+    all_importances = _model.feature_importances_
+    weights = np.array(
+        [all_importances[scaler_features.index(p)] if p in scaler_features else 0.0
+         for p in _top100],
+        dtype=float,
+    )
+    return weights
 
 
 def get_gene_impacts(
     gene_values: Optional[dict[str, float]],
+    top_n: int = 20,
 ) -> list[dict]:
     """
-    Compute gene-level feature importances relative to the reference baseline.
+    Compute ranked feature impacts for the top-100 biomarkers.
+
+    Impact proxy:
+        impact_i = importance_i × (x_i − mean_i) / scale_i
 
     Args:
-        gene_values: Patient gene expression values.  If None, returns
-                     demonstration values derived from the baseline.
+        gene_values: Dict of {probe_id: expression_value}.
+                     If None or model not ready, returns [].
+        top_n:       How many top impacts to return (default 20).
 
     Returns:
-        List of impact dicts sorted by |impact| descending, each containing:
-          - gene:       Gene symbol
-          - impact:     Signed impact score (positive = risk-increasing)
-          - expression: Patient expression value (log₂)
-          - baseline:   Reference baseline value (log₂)
+        List of dicts sorted by |impact| descending:
+          { gene, impact, expression, baseline }
     """
+    if not _is_ready or _model is None or _scaler is None or not _top100:
+        logger.warning("Model artifacts not ready — no feature impacts generated.")
+        return []
+
     if gene_values is None:
-        # Demo values: simulate a high-risk patient
-        demo_patient = {
-            "IL6": 9.1, "TLR4": 6.8, "HLA-DRA": 1.2, "STAT3": 3.4,
-            "TNF": 8.3, "CXCL8": 7.1, "CD14": 3.8, "MMP8": 6.9,
-            "LBP": 5.8, "PCSK9": 2.4,
+        logger.warning("No feature payload supplied for explainability.")
+        return []
+
+    # Scaler statistics for the top-100 probes
+    scaler_features = list(getattr(_scaler, "feature_names_in_", []))
+    if scaler_features:
+        indices  = [scaler_features.index(p) for p in _top100 if p in scaler_features]
+        baseline = np.array(_scaler.mean_[indices],  dtype=float)
+        scale    = np.array(_scaler.scale_[indices], dtype=float)
+    else:
+        baseline = np.zeros(len(_top100), dtype=float)
+        scale    = np.ones(len(_top100),  dtype=float)
+
+    safe_scale = np.where(scale == 0, 1.0, scale)
+    weights    = _get_importance_weights()
+
+    x = np.array(
+        [gene_values.get(p, float(baseline[i])) for i, p in enumerate(_top100)],
+        dtype=float,
+    )
+
+    normalized_delta = (x - baseline) / safe_scale
+    signed_impacts   = weights * normalized_delta
+
+    results = [
+        {
+            "gene":       probe,
+            "impact":     round(float(signed_impacts[i]), 6),
+            "expression": round(float(x[i]), 6),
+            "baseline":   round(float(baseline[i]), 6),
         }
-        gene_values = demo_patient
+        for i, probe in enumerate(_top100)
+    ]
 
-    results: list[dict] = []
-    for gene, base_impact in _BASE_IMPACTS.items():
-        patient_expr = gene_values.get(gene, REFERENCE_BASELINE.get(gene, 0.0))
-        baseline = REFERENCE_BASELINE.get(gene, 0.0)
-
-        # Scale impact by fold-change relative to baseline (sigmoid-clamped)
-        delta = patient_expr - baseline
-        fold_change = delta / (abs(baseline) + 1e-6)
-        adjusted_impact = base_impact * (1.0 + 0.5 * math.tanh(fold_change))
-
-        results.append(
-            {
-                "gene": gene,
-                "impact": round(adjusted_impact, 4),
-                "expression": round(patient_expr, 3),
-                "baseline": baseline,
-            }
-        )
-
-    results.sort(key=lambda x: abs(x["impact"]), reverse=True)
-    return results
+    results.sort(key=lambda r: abs(r["impact"]), reverse=True)
+    return results[: max(1, top_n)]

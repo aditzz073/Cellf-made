@@ -23,7 +23,6 @@ import ValidationStatus  from './components/ValidationStatus.jsx';
 import LoadingScreen     from './components/LoadingScreen.jsx';
 import ResultsDashboard  from './components/ResultsDashboard.jsx';
 import { API, extractApiError } from './services/api.js';
-import { GENE_PANEL } from './constants.js';
 
 /**
  * Parses and validates an uploaded CSV File client-side.
@@ -43,53 +42,51 @@ async function buildFileValidationSteps(file) {
 
   const lines = text.trim().split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (lines.length < 2) {
-    return [...steps, { label: 'Checking CSV format', detail: 'File must have a header row and at least one data row.', status: 'error' }];
+    return [...steps, { label: 'Checking CSV format', detail: 'CSV must include a header row and at least one data row.', status: 'error' }];
   }
 
-  const header = lines[0].split(',').map(h => h.trim());
-  const geneIdx = header.findIndex(h => h === 'Gene');
-  const exprIdx = header.findIndex(h => h === 'Expression');
-  if (geneIdx === -1 || exprIdx === -1) {
-    return [...steps, { label: 'Checking CSV format', detail: `Required columns missing. Found: ${header.join(', ')}`, status: 'error' }];
-  }
-  steps.push({ label: 'Checking CSV format', detail: 'Gene and Expression columns present', status: 'ok' });
+  const header = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
 
-  const foundGenes = new Set(
-    lines.slice(1).map(row => row.split(',')[geneIdx]?.trim()).filter(Boolean)
-  );
-  const missing = GENE_PANEL.filter(g => !foundGenes.has(g));
-  if (missing.length > 0) {
-    return [...steps, { label: 'Required gene panel check', detail: `Missing genes: ${missing.join(', ')}`, status: 'error' }];
+  // Accept long-format GEO CSVs (ProbeID + Expression columns)
+  const isLongFormat = header.includes('ProbeID') || header.includes('Expression');
+  // Also accept wide-format V-feature CSVs
+  const vFeatureCols = header.filter(h => /^V\d+$/i.test(h));
+
+  if (!isLongFormat && vFeatureCols.length === 0) {
+    return [
+      ...steps,
+      {
+        label: 'Checking CSV format',
+        detail: 'Expected either a ProbeID/Expression long-format GEO CSV or a wide-format CSV with V-feature columns.',
+        status: 'error',
+      },
+    ];
   }
-  steps.push({ label: 'Required gene panel check', detail: `All ${GENE_PANEL.length} required genes present`, status: 'ok' });
+
+  if (isLongFormat) {
+    steps.push({ label: 'Checking CSV format', detail: `Long-format GEO CSV detected (${lines.length - 1} probe rows)`, status: 'ok' });
+  } else {
+    steps.push({ label: 'Checking CSV format', detail: `Wide-format CSV detected (${vFeatureCols.length} V-feature columns)`, status: 'ok' });
+  }
+
   steps.push({ label: 'Sending for backend validation', detail: 'Full validation performed server-side', status: 'ok' });
   return steps;
 }
 
-/** Builds validation steps for genes dict (manual / paste input). */
-function buildGenesValidationSteps(data) {
-  const geneCount  = Object.keys(data).length;
-  const allPresent = GENE_PANEL.every(g => g in data);
-  const allInRange = Object.values(data).every(v => v >= 0 && v <= 20);
+/** Builds validation steps for feature dict (paste input). */
+function buildFeaturesValidationSteps(data) {
+  const featureCount = Object.keys(data).length;
+  const allNumeric = Object.values(data).every(v => Number.isFinite(v));
   return [
     {
-      label:  'Gene expression data loaded',
-      detail: `${geneCount} gene values provided`,
+      label:  'Feature payload loaded',
+      detail: `${featureCount} feature values provided`,
       status: 'ok',
     },
     {
-      label:  'Required gene panel check',
-      detail: allPresent
-        ? `All ${GENE_PANEL.length} required genes present`
-        : `Missing: ${GENE_PANEL.filter(g => !(g in data)).join(', ')}`,
-      status: allPresent ? 'ok' : 'error',
-    },
-    {
-      label:  'Expression range check',
-      detail: allInRange
-        ? 'All values within valid log₂ range (0 – 20)'
-        : 'Some values are out of the expected range',
-      status: allInRange ? 'ok' : 'error',
+      label:  'Numeric value check',
+      detail: allNumeric ? 'All parsed feature values are numeric' : 'One or more feature values are non-numeric',
+      status: allNumeric ? 'ok' : 'error',
     },
   ];
 }
@@ -109,7 +106,7 @@ function AppInner() {
     setInputError('');
     const steps = type === 'file'
       ? await buildFileValidationSteps(data)
-      : buildGenesValidationSteps(data);
+      : buildFeaturesValidationSteps(data);
     const anyError = steps.some(s => s.status === 'error');
 
     if (anyError) {
@@ -135,14 +132,20 @@ function AppInner() {
       if (pendingData.type === 'file') {
         apiResult = await API.predictFromFile(pendingData.data);
       } else {
-        apiResult = await API.predictFromGenes(pendingData.data);
+        apiResult = await API.predictFromFeatures(pendingData.data);
       }
+      // Backend returns either `features` (new) or `genes` (legacy).
+      // For paste input the user's own feature dict is used as the gene map.
+      const resolvedFeatures =
+        pendingData.type === 'features'
+          ? pendingData.data
+          : (apiResult.features ?? apiResult.genes ?? {});
+
       setResults({
         ...apiResult,
         patientId: pendingData.patientId || 'ANONYMOUS',
-        genes: pendingData.type === 'genes'
-          ? pendingData.data
-          : apiResult.genes ?? {},
+        genes: resolvedFeatures,   // ResultsDashboard reads results.genes
+        features: resolvedFeatures, // keep both keys for forward-compat
       });
       setView('results');
     } catch (err) {

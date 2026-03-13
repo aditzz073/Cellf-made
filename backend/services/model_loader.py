@@ -1,20 +1,6 @@
-"""
-services/model_loader.py
-------------------------
-Loads the trained scikit-learn model from  models/sepsis_model.pkl.
-Falls back to a biology-informed PlaceholderModel when no file is present.
+"""Load and cache trained model artifacts (RF model + scaler + top-100 biomarkers)."""
 
-Integration guide
------------------
-1. Train your model (e.g. RandomForestClassifier or GradientBoostingClassifier)
-   on a gene expression dataset labelled for sepsis.
-2. Save it:  pickle.dump(model, open("backend/models/sepsis_model.pkl", "wb"))
-3. The model must implement:
-     model.predict_proba(X: np.ndarray) -> np.ndarray  (shape n × 2)
-     model.predict(X: np.ndarray)       -> np.ndarray  (shape n,)
-4. Restart the API — model_loader.load_model() will detect the file automatically.
-"""
-
+import json
 import logging
 import pickle
 from pathlib import Path
@@ -22,115 +8,149 @@ from typing import Protocol, runtime_checkable
 
 import numpy as np
 
+try:
+    import joblib
+except Exception:  # pragma: no cover
+    joblib = None
+
 logger = logging.getLogger(__name__)
 
-MODEL_PATH = Path(__file__).parent.parent / "models" / "sepsis_model.pkl"
+MODELS_DIR = Path(__file__).parent.parent / "models"
+MODEL_CANDIDATES  = ("sepsis_rf_model.pkl", "sepsis_model.pkl")
+SCALER_CANDIDATES = ("sepsis_scaler.pkl",)
+TOP100_PATH       = MODELS_DIR / "top100_biomarkers.json"
 
-# Feature order the trained model expects (must match training-time column order)
-FEATURE_ORDER: list[str] = [
-    "IL6", "TLR4", "HLA-DRA", "STAT3", "TNF",
-    "CXCL8", "CD14", "MMP8", "LBP", "PCSK9",
-]
-
-
-# ---------------------------------------------------------------------------
-# Model protocol — any real model must satisfy this interface
-# ---------------------------------------------------------------------------
 
 @runtime_checkable
 class SepsisModelProtocol(Protocol):
-    """Interface that a trained sepsis prediction model must implement."""
+    """Interface required by prediction code."""
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray: ...
     def predict(self, X: np.ndarray) -> np.ndarray: ...
 
 
+@runtime_checkable
+class FeatureScalerProtocol(Protocol):
+    """Interface required by preprocessing code."""
+
+    def transform(self, X): ...
+
+
 # ---------------------------------------------------------------------------
-# Deterministic placeholder (used when no .pkl file is found)
+# Internal helpers
 # ---------------------------------------------------------------------------
 
-class PlaceholderModel:
+def _first_existing(candidates: tuple[str, ...]) -> Path | None:
+    for filename in candidates:
+        candidate = MODELS_DIR / filename
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def _load_artifact(path: Path):
+    """Prefer joblib for sklearn objects; fall back to pickle."""
+    if joblib is not None:
+        return joblib.load(path)
+    with open(path, "rb") as fh:
+        return pickle.load(fh)  # noqa: S301
+
+
+def _load_top100(model, scaler) -> list[str]:
     """
-    Biology-informed placeholder model for development and evaluation.
+    Load the top-100 biomarker probe IDs.
 
-    Computes a plausible risk score from a weighted linear combination of
-    pro-inflammatory (risk-increasing) and immune-regulation (protective)
-    gene expression values.  The weights are loosely inspired by sepsis
-    literature but are NOT clinically validated.
-
-    Replace this by dropping a real trained model at  models/sepsis_model.pkl.
+    Priority:
+      1. top100_biomarkers.json (pre-computed, fastest)
+      2. Derive at runtime from model.feature_importances_ + scaler.feature_names_in_
     """
+    if TOP100_PATH.exists():
+        try:
+            probes = json.loads(TOP100_PATH.read_text())
+            if isinstance(probes, list) and probes:
+                logger.info("Loaded %d top biomarkers from %s", len(probes), TOP100_PATH)
+                return [str(p) for p in probes]
+        except Exception as exc:
+            logger.warning("Failed to read %s: %s — deriving from model.", TOP100_PATH, exc)
 
-    # Pro-inflammatory / risk-increasing markers
-    _RISK_WEIGHTS: dict[str, float] = {
-        "IL6":   0.22,  # master pro-inflammatory cytokine
-        "TNF":   0.20,  # tumour necrosis factor — early sepsis signal
-        "TLR4":  0.18,  # LPS pattern recognition receptor
-        "CXCL8": 0.15,  # neutrophil chemotaxis signal
-        "MMP8":  0.12,  # extracellular matrix remodelling in sepsis
-        "LBP":   0.10,  # LPS-binding protein — innate immune activation
-        "PCSK9": 0.08,  # associated with poor sepsis outcomes
-    }
+    # Derive from model importances
+    if hasattr(model, "feature_importances_") and hasattr(scaler, "feature_names_in_"):
+        feature_names = list(scaler.feature_names_in_)
+        importances   = model.feature_importances_
+        ranked = sorted(zip(feature_names, importances), key=lambda x: x[1], reverse=True)
+        top100 = [name for name, _ in ranked[:100]]
+        logger.info("Derived top 100 biomarkers from RF feature importances.")
+        return top100
 
-    # Immune-regulation / protective markers (down-regulated in severe sepsis)
-    _PROTECTIVE_WEIGHTS: dict[str, float] = {
-        "HLA-DRA": -0.25,  # MHC-II expression — reduced in immunosuppression
-        "STAT3":    -0.10,  # anti-inflammatory transcription factor
-        "CD14":     -0.05,  # monocyte differentiation marker
-    }
-
-    def __init__(self) -> None:
-        logger.warning(
-            "PlaceholderModel is active — predictions are illustrative only. "
-            "To enable real inference, add a trained model at: %s",
-            MODEL_PATH,
-        )
-
-    def score_from_genes(self, gene_values: dict[str, float]) -> float:
-        """Compute a [0, 1] risk score from gene expression values."""
-        score = 0.0
-        all_weights = {**self._RISK_WEIGHTS, **self._PROTECTIVE_WEIGHTS}
-        for gene, weight in all_weights.items():
-            value = gene_values.get(gene, 0.0)
-            # Normalise log₂ expression to ~[0, 1] (typical range 0–12)
-            normalised = min(max(value / 12.0, 0.0), 1.0)
-            score += weight * normalised
-        # Shift to [0, 1] via soft calibration
-        calibrated = (score + 0.30) / 0.65
-        return float(min(max(calibrated, 0.01), 0.99))
-
-    # Implement protocol so isinstance checks pass
-    def predict_proba(self, X: np.ndarray) -> np.ndarray:
-        raise NotImplementedError("Use score_from_genes() for PlaceholderModel.")
-
-    def predict(self, X: np.ndarray) -> np.ndarray:
-        raise NotImplementedError("Use score_from_genes() for PlaceholderModel.")
+    logger.error("Cannot determine top-100 biomarkers — no JSON file and no feature_importances_.")
+    return []
 
 
 # ---------------------------------------------------------------------------
 # Public loader
 # ---------------------------------------------------------------------------
 
-def load_model() -> tuple[SepsisModelProtocol | PlaceholderModel, bool]:
+def load_model_bundle() -> tuple[
+    SepsisModelProtocol | None,
+    FeatureScalerProtocol | None,
+    list[str],   # top-100 probe IDs (the model's actual input features)
+    bool,
+]:
     """
-    Attempt to load the trained model from disk.
+    Load RF model, scaler, and the top-100 biomarker list.
 
     Returns:
-        (model, is_real_model) — where `is_real_model` is False when the
-        PlaceholderModel is in use.
+        (model, scaler, top100_probes, is_ready)
     """
-    if MODEL_PATH.exists():
-        try:
-            with open(MODEL_PATH, "rb") as fh:
-                model = pickle.load(fh)  # noqa: S301 — intentional model load
-            logger.info("Loaded trained model from %s", MODEL_PATH)
-            return model, True
-        except Exception as exc:
-            logger.error(
-                "Failed to deserialise model at %s: %s  →  using PlaceholderModel.",
-                MODEL_PATH,
-                exc,
-            )
+    model_path  = _first_existing(MODEL_CANDIDATES)
+    scaler_path = _first_existing(SCALER_CANDIDATES)
 
-    logger.info("No model file found at %s  →  using PlaceholderModel.", MODEL_PATH)
-    return PlaceholderModel(), False
+    if model_path is None or scaler_path is None:
+        logger.error(
+            "Missing required model artifacts in %s. Expected %s and %s.",
+            MODELS_DIR, MODEL_CANDIDATES, SCALER_CANDIDATES,
+        )
+        return None, None, [], False
+
+    try:
+        model  = _load_artifact(model_path)
+        scaler = _load_artifact(scaler_path)
+    except Exception as exc:
+        logger.error("Failed to load model artifacts: %s", exc)
+        return None, None, [], False
+
+    top100 = _load_top100(model, scaler)
+    if not top100:
+        return None, None, [], False
+
+    logger.info(
+        "Ready: model=%s  scaler=%s  top_biomarkers=%d",
+        model_path.name, scaler_path.name, len(top100),
+    )
+    return model, scaler, top100, True
+
+
+# Module-level singleton — loaded once at startup
+_MODEL_BUNDLE = load_model_bundle()
+
+
+# ---------------------------------------------------------------------------
+# Public accessors (used by predictor, explainability, validation, routes)
+# ---------------------------------------------------------------------------
+
+def get_model_bundle() -> tuple[
+    SepsisModelProtocol | None,
+    FeatureScalerProtocol | None,
+    list[str],
+    bool,
+]:
+    return _MODEL_BUNDLE
+
+
+def get_top100_probes() -> list[str]:
+    """Return the ordered list of top-100 biomarker probe IDs."""
+    return _MODEL_BUNDLE[2]
+
+
+def is_model_ready() -> bool:
+    return _MODEL_BUNDLE[3]

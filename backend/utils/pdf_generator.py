@@ -19,8 +19,6 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from config import REFERENCE_BASELINE
-
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.lib import colors
@@ -222,20 +220,40 @@ def generate_report_pdf(
     )
     story.append(Spacer(1, 0.6 * cm))
 
-    # ── 3. Gene expression profile table ─────────────────────────────────
-    story.append(_section_header("1.  Gene Expression Profile"))
+    # ── 3. Top feature expression profile table ──────────────────────────
+    story.append(_section_header("1.  Top Feature Expression Profile"))
     story.append(Spacer(1, 0.3 * cm))
 
-    gene_header = [["Gene", "Patient (log₂)", "Baseline (log₂)", "Δ vs Baseline"]]
-    gene_rows = [
-        [
-            gene,
-            f"{expr:.3f}",
-            f"{REFERENCE_BASELINE.get(gene, 0.0):.2f}",
-            f"{expr - REFERENCE_BASELINE.get(gene, 0.0):+.2f}",
+    baseline_by_feature = {
+        item.get("gene"): float(item.get("baseline", 0.0))
+        for item in feature_importances
+        if item.get("gene") is not None
+    }
+
+    if feature_importances:
+        ranked = feature_importances[:20]
+        gene_rows = [
+            [
+                item["gene"],
+                f"{float(item.get('expression', genes.get(item['gene'], 0.0))):.3f}",
+                f"{float(item.get('baseline', baseline_by_feature.get(item['gene'], 0.0))):.3f}",
+                f"{float(item.get('expression', genes.get(item['gene'], 0.0)) - item.get('baseline', baseline_by_feature.get(item['gene'], 0.0))):+.3f}",
+            ]
+            for item in ranked
         ]
-        for gene, expr in sorted(genes.items())
-    ]
+    else:
+        fallback_features = sorted(genes.items())[:20]
+        gene_rows = [
+            [
+                feature,
+                f"{expr:.3f}",
+                "0.000",
+                f"{expr:+.3f}",
+            ]
+            for feature, expr in fallback_features
+        ]
+
+    gene_header = [["Feature", "Patient", "Baseline", "Delta vs Baseline"]]
     gene_table = Table(
         gene_header + gene_rows,
         colWidths=[5 * cm, 5 * cm, 5 * cm, 4.5 * cm],
@@ -262,14 +280,13 @@ def generate_report_pdf(
     story.append(Spacer(1, 0.6 * cm))
 
     # ── 4. Feature importances table ─────────────────────────────────────
-    story.append(_section_header("2.  Top Influencing Genes  (Feature Importances)"))
+    story.append(_section_header("2.  Top Influencing Features"))
     story.append(Spacer(1, 0.3 * cm))
     story.append(
         Paragraph(
-            "Genes ranked by absolute impact on the risk prediction. "
-            "Positive scores indicate expression patterns that increase predicted "
-            "sepsis risk; negative scores indicate protective patterns consistent "
-            "with intact immune regulation.",
+            "Features ranked by absolute impact on the risk prediction. "
+            "Positive scores indicate patterns associated with higher predicted "
+            "sepsis risk; negative scores indicate lower-risk directionality.",
             body_style,
         )
     )
@@ -282,7 +299,7 @@ def generate_report_pdf(
         if impact > -0.10: return "Mild ↓ protective"
         return "Strong ↓ protective"
 
-    fi_header = [["Rank", "Gene", "Impact", "Direction"]]
+    fi_header = [["Rank", "Feature", "Impact", "Direction"]]
     fi_rows = [
         [
             str(i),

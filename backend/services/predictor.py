@@ -1,31 +1,16 @@
-"""
-services/predictor.py
----------------------
-Orchestrates model inference and risk classification.
-
-Prediction flow:
-  1. Accept gene expression dict from the route layer.
-  2. If PlaceholderModel is active  → compute score via weighted formula.
-  3. If trained model is loaded     → build feature vector, call predict_proba.
-  4. Map continuous score to categorical risk level.
-  5. Return a typed PredictionResult dict.
-"""
+"""Run sepsis prediction using the top-100 biomarker RF + scaler pipeline."""
 
 import logging
 from typing import TypedDict
 
 import numpy as np
+import pandas as pd
 
-from services.model_loader import (
-    load_model,
-    PlaceholderModel,
-    FEATURE_ORDER,
-)
+from services.model_loader import get_model_bundle
 
 logger = logging.getLogger(__name__)
 
-# Module-level singleton — loaded once at import time
-_model, _is_real_model = load_model()
+_model, _scaler, _top100, _is_ready = get_model_bundle()
 
 
 # ---------------------------------------------------------------------------
@@ -33,11 +18,11 @@ _model, _is_real_model = load_model()
 # ---------------------------------------------------------------------------
 
 class PredictionResult(TypedDict):
-    risk_score: float
-    risk_level: str       # "High" | "Moderate" | "Low"
-    confidence: float
-    model_type: str       # "trained" | "placeholder"
-    genes_used: list[str]
+    risk_score:    float
+    risk_level:    str    # "High" | "Moderate" | "Low"
+    confidence:    float
+    model_type:    str
+    features_used: int
 
 
 # ---------------------------------------------------------------------------
@@ -45,7 +30,6 @@ class PredictionResult(TypedDict):
 # ---------------------------------------------------------------------------
 
 def _classify_risk(score: float) -> str:
-    """Map a continuous [0, 1] risk score to a categorical level."""
     if score >= 0.70:
         return "High"
     if score >= 0.40:
@@ -54,11 +38,6 @@ def _classify_risk(score: float) -> str:
 
 
 def _margin_confidence(probabilities: np.ndarray) -> float:
-    """
-    Use the probability of the predicted class as a confidence estimate.
-
-    For a binary classifier this is simply max(P(0), P(1)).
-    """
     return float(round(float(np.max(probabilities)), 4))
 
 
@@ -66,36 +45,64 @@ def _margin_confidence(probabilities: np.ndarray) -> float:
 # Public API
 # ---------------------------------------------------------------------------
 
-def run_prediction(gene_values: dict[str, float]) -> PredictionResult:
+def run_prediction(feature_values: dict[str, float]) -> PredictionResult:
     """
-    Run sepsis risk prediction from a gene expression dictionary.
+    Run sepsis risk prediction from a top-100 biomarker expression dict.
+
+    Replicates the training-time logic:
+        patient = patient.set_index("ProbeID").loc[top100_genes]
+        scaled  = scaler.transform(patient)
+        proba   = model.predict_proba(scaled)
 
     Args:
-        gene_values: Mapping of gene symbol → log₂ expression value.
-                     Missing genes default to 0.0.
+        feature_values: {probe_id: expression_value} for the top-100 probes.
 
     Returns:
         PredictionResult TypedDict.
     """
-    if isinstance(_model, PlaceholderModel):
-        risk_score = _model.score_from_genes(gene_values)
-        # Placeholder confidence: loosely correlated with score magnitude
-        confidence = round(0.60 + 0.32 * abs(risk_score - 0.50) * 2, 4)
-        model_type = "placeholder"
-    else:
-        feature_vector = np.array(
-            [gene_values.get(gene, 0.0) for gene in FEATURE_ORDER],
-            dtype=np.float32,
-        ).reshape(1, -1)
-        proba = _model.predict_proba(feature_vector)[0]
-        risk_score = float(proba[1])          # P(sepsis positive)
-        confidence = _margin_confidence(proba)
-        model_type = "trained"
+    if not _is_ready or _model is None or _scaler is None or not _top100:
+        raise RuntimeError(
+            "Model pipeline is not ready. Ensure sepsis_rf_model.pkl, "
+            "sepsis_scaler.pkl, and top100_biomarkers.json are in backend/models/."
+        )
+
+    missing = [p for p in _top100 if p not in feature_values]
+    if missing:
+        raise ValueError(
+            f"Missing {len(missing)} required biomarker probe(s) for prediction. "
+            f"Examples: {', '.join(missing[:5])}"
+        )
+
+    # The RF was trained on ALL 54,675 probes.
+    # Strategy: build a full-length zero vector, slot in the top-100 values
+    # at their original column positions, scale the whole vector, predict.
+    scaler_features = list(getattr(_scaler, "feature_names_in_", []))
+    if not scaler_features:
+        raise RuntimeError("Scaler has no feature_names_in_ — cannot reconstruct full vector.")
+
+    # Build a reverse-lookup dict once (O(1) per probe)
+    probe_to_idx = {name: i for i, name in enumerate(scaler_features)}
+
+    n_features = len(scaler_features)
+    full_raw   = np.zeros(n_features, dtype=np.float64)
+
+    for probe in _top100:
+        idx = probe_to_idx.get(probe)
+        if idx is not None:
+            full_raw[idx] = float(feature_values[probe])
+
+    # Scale the full vector using the fitted scaler
+    full_scaled = _scaler.transform(full_raw.reshape(1, -1))
+
+    proba = _model.predict_proba(full_scaled)[0]
+    positive_idx = 1 if len(proba) > 1 else 0
+    risk_score = float(proba[positive_idx])
+    confidence = _margin_confidence(proba)
 
     return PredictionResult(
         risk_score=round(risk_score, 4),
         risk_level=_classify_risk(risk_score),
         confidence=confidence,
-        model_type=model_type,
-        genes_used=sorted(gene_values.keys()),
+        model_type="trained-rf+scaler",
+        features_used=len(_top100),
     )
