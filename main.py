@@ -43,17 +43,24 @@ def load_expression(filename: str) -> pd.DataFrame:
     """
     Load an expression matrix CSV.
 
-    Expected format (as exported from R / GEO):
-        - Unnamed first column  → sample IDs  (e.g. GSM251887)
-        - Remaining columns V1, V2 … → gene expression values
+    Expected GEO / R export format:
+        - Row 0 (header): probe/gene IDs
+        - First column   : GSM sample IDs
+        - Body           : expression values
+
+    The raw CSV has genes as ROWS and samples as COLUMNS, so we
+    transpose after reading to obtain the standard
+        samples × genes
+    layout expected by the rest of the pipeline.
 
     Returns a DataFrame with:
-        - 'Sample'  column (sample IDs, stripped of whitespace)
-        - V1 … Vn   columns (numeric gene-expression values)
+        - 'Sample'  column  (GSM sample IDs, stripped of whitespace)
+        - One column per gene/probe ID (numeric expression values)
     """
     filepath = path(filename)
     print(f"  Reading {filename} …", end=" ", flush=True)
-    df = pd.read_csv(filepath, index_col=0)  # first col becomes index
+    df = pd.read_csv(filepath, index_col=0)  # genes as rows, samples as columns
+    df = df.T                                # transpose → samples as rows, genes as columns
     df.index.name = "Sample"
     df = df.reset_index()
     df["Sample"] = df["Sample"].astype(str).str.strip()
@@ -118,7 +125,7 @@ print("\n" + "═" * 60)
 print("STEP 1 │ Loading expression datasets")
 print("═" * 60)
 
-d1 = load_expression("GSE54514_expression_matrix.csv")
+d1 = load_expression("GSE57065_expression_matrix.csv")
 d2 = load_expression("GSE9960_expression_matrix.csv")
 d3 = load_expression("GSE95233_expression_matrix.csv")
 
@@ -165,11 +172,11 @@ print("\n" + "═" * 60)
 print("STEP 4 │ Loading label files")
 print("═" * 60)
 
-l1 = load_labels("GSE54514_labels.csv")
+l1 = load_labels("GSE57065_labels.csv")
 l2 = load_labels("GSE9960_labels.csv")
 l3 = load_labels("GSE95233_labels.csv")
 
-print(f"  GSE54514 label file : {len(l1)} samples")
+print(f"  GSE57065 label file : {len(l1)} samples")
 print(f"  GSE9960  label file : {len(l2)} samples")
 print(f"  GSE95233 label file : {len(l3)} samples")
 
@@ -181,7 +188,7 @@ print("\n" + "═" * 60)
 print("STEP 5 │ Attaching labels to expression data")
 print("═" * 60)
 
-X1 = attach_labels(d1, l1, "GSE54514")
+X1 = attach_labels(d1, l1, "GSE57065")
 X2 = attach_labels(d2, l2, "GSE9960")
 X3 = attach_labels(d3, l3, "GSE95233")
 
@@ -199,7 +206,7 @@ cols2 = set(gene_cols(X2))
 cols3 = set(gene_cols(X3))
 common_genes = sorted(cols1 & cols2 & cols3)
 
-print(f"  GSE54514 gene cols : {len(cols1)}")
+print(f"  GSE57065 gene cols : {len(cols1)}")
 print(f"  GSE9960  gene cols : {len(cols2)}")
 print(f"  GSE95233 gene cols : {len(cols3)}")
 print(f"  Common gene cols   : {len(common_genes)}")
@@ -367,7 +374,7 @@ ConfusionMatrixDisplay.from_predictions(
 ax_cm.set_title(f"Confusion Matrix\nAccuracy = {acc:.4f}  |  ROC-AUC = {auc:.4f}",
                 fontsize=13, fontweight="bold", pad=12)
 
-plt.suptitle("Sepsis Classification — GSE54514 + GSE9960 + GSE95233",
+plt.suptitle("Sepsis Classification — GSE57065 + GSE9960 + GSE95233",
              fontsize=14, fontweight="bold", y=1.01)
 plt.tight_layout()
 
