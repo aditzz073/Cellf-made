@@ -12,7 +12,7 @@ export const authHttp = axios.create({
   timeout: 30_000,
 });
 
-// ── Request interceptor — attach JWT from localStorage ──────────────────────
+// ── Request interceptor - attach JWT from localStorage ──────────────────────
 authHttp.interceptors.request.use((config) => {
   const token = localStorage.getItem('sepsisai_token');
   if (token) {

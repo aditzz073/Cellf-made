@@ -2,7 +2,7 @@
   "name": "sepsisai-frontend",
   "private": true,
   "version": "1.0.0",
-  "description": "SepsisAI — Research-grade sepsis risk prediction from gene expression data",
+  "description": "SepsisAI - Research-grade sepsis risk prediction from gene expression data",
   "type": "module",
   "scripts": {
     "dev": "vite",

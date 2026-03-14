@@ -119,7 +119,7 @@ def attach_labels(expr_df: pd.DataFrame, label_df: pd.DataFrame,
 
 
 # ══════════════════════════════════════════════════════════════════
-# STEP 1 — Load expression matrices
+# STEP 1 - Load expression matrices
 # ══════════════════════════════════════════════════════════════════
 print("\n" + "═" * 60)
 print("STEP 1 │ Loading expression datasets")
@@ -131,7 +131,7 @@ d3 = load_expression("GSE95233_expression_matrix.csv")
 
 
 # ══════════════════════════════════════════════════════════════════
-# STEP 2 — Load biomarker gene list (100 probe IDs)
+# STEP 2 - Load biomarker gene list (100 probe IDs)
 # ══════════════════════════════════════════════════════════════════
 print("\n" + "═" * 60)
 print("STEP 2 │ Loading biomarker list")
@@ -150,7 +150,7 @@ print(f"  Sample IDs: {genes[:5]} …")
 #
 # Strategy: use ALL gene feature columns (V1…Vn) from each dataset.
 # The Random Forest feature-importance step will surface the columns
-# most predictive of sepsis — these implicitly correspond to the
+# most predictive of sepsis - these implicitly correspond to the
 # top biomarkers.  Column names are kept as V1, V2… so the model
 # can still be evaluated; the importance plot highlights which
 # positional probes matter most.
@@ -158,7 +158,7 @@ print(f"  Sample IDs: {genes[:5]} …")
 
 
 # ══════════════════════════════════════════════════════════════════
-# STEP 3 — Identify gene-expression columns (Vn columns)
+# STEP 3 - Identify gene-expression columns (Vn columns)
 # ══════════════════════════════════════════════════════════════════
 def gene_cols(df: pd.DataFrame) -> list:
     """Return all expression-value columns (everything except 'Sample' and 'label')."""
@@ -166,7 +166,7 @@ def gene_cols(df: pd.DataFrame) -> list:
 
 
 # ══════════════════════════════════════════════════════════════════
-# STEP 4 — Load label files
+# STEP 4 - Load label files
 # ══════════════════════════════════════════════════════════════════
 print("\n" + "═" * 60)
 print("STEP 4 │ Loading label files")
@@ -182,7 +182,7 @@ print(f"  GSE95233 label file : {len(l3)} samples")
 
 
 # ══════════════════════════════════════════════════════════════════
-# STEP 5 — Attach labels → each dataset becomes samples × (genes + label)
+# STEP 5 - Attach labels → each dataset becomes samples × (genes + label)
 # ══════════════════════════════════════════════════════════════════
 print("\n" + "═" * 60)
 print("STEP 5 │ Attaching labels to expression data")
@@ -194,7 +194,7 @@ X3 = attach_labels(d3, l3, "GSE95233")
 
 
 # ══════════════════════════════════════════════════════════════════
-# STEP 6 — Find common gene columns across all three datasets
+# STEP 6 - Find common gene columns across all three datasets
 #           (intersection ensures same features for concat)
 # ══════════════════════════════════════════════════════════════════
 print("\n" + "═" * 60)
@@ -218,7 +218,7 @@ X3 = X3[["Sample", "label"] + common_genes]
 
 
 # ══════════════════════════════════════════════════════════════════
-# STEP 7 — Merge all datasets into one combined feature matrix
+# STEP 7 - Merge all datasets into one combined feature matrix
 # ══════════════════════════════════════════════════════════════════
 print("\n" + "═" * 60)
 print("STEP 7 │ Merging all datasets")
@@ -236,7 +236,7 @@ print(f"  Control  : {n_control}  ({100*n_control/n_total:.1f}%)")
 
 
 # ══════════════════════════════════════════════════════════════════
-# STEP 8 — Separate features and target labels
+# STEP 8 - Separate features and target labels
 # ══════════════════════════════════════════════════════════════════
 print("\n" + "═" * 60)
 print("STEP 8 │ Separating features and labels")
@@ -250,7 +250,7 @@ print(f"  Label vector   y : {y.shape}  (unique values: {sorted(y.unique())})")
 
 
 # ══════════════════════════════════════════════════════════════════
-# STEP 9 — Convert labels to numeric (already done) & scale features
+# STEP 9 - Convert labels to numeric (already done) & scale features
 # ══════════════════════════════════════════════════════════════════
 print("\n" + "═" * 60)
 print("STEP 9 │ Scaling features (StandardScaler)")
@@ -262,7 +262,7 @@ print(f"  Scaling done.  Mean ≈ {X_scaled.mean():.4f}, Std ≈ {X_scaled.std()
 
 
 # ══════════════════════════════════════════════════════════════════
-# STEP 10 — Train / test split (stratified)
+# STEP 10 - Train / test split (stratified)
 # ══════════════════════════════════════════════════════════════════
 print("\n" + "═" * 60)
 print("STEP 10 │ Train / test split  (80 % / 20 %, stratified)")
@@ -281,7 +281,7 @@ print(f"  Test  : {len(X_test)} samples  "
 
 
 # ══════════════════════════════════════════════════════════════════
-# STEP 11 — Train Random Forest model
+# STEP 11 - Train Random Forest model
 # ══════════════════════════════════════════════════════════════════
 print("\n" + "═" * 60)
 print("STEP 11 │ Training Random Forest Classifier")
@@ -311,7 +311,7 @@ print(f"  5-Fold CV ROC-AUC : {cv_scores.mean():.4f} ± {cv_scores.std():.4f}")
 
 
 # ══════════════════════════════════════════════════════════════════
-# STEP 12 — Evaluate model: Accuracy + ROC-AUC
+# STEP 12 - Evaluate model: Accuracy + ROC-AUC
 # ══════════════════════════════════════════════════════════════════
 print("\n" + "═" * 60)
 print("STEP 12 │ Model Evaluation")
@@ -333,7 +333,7 @@ print(classification_report(y_test, y_pred, target_names=["Control (0)", "Sepsis
 
 
 # ══════════════════════════════════════════════════════════════════
-# STEP 13 — Feature importance: top 20 predictive biomarker genes
+# STEP 13 - Feature importance: top 20 predictive biomarker genes
 # ══════════════════════════════════════════════════════════════════
 print("\n" + "═" * 60)
 print("STEP 13 │ Feature Importance (Top 20 Biomarker Genes)")
@@ -374,7 +374,7 @@ ConfusionMatrixDisplay.from_predictions(
 ax_cm.set_title(f"Confusion Matrix\nAccuracy = {acc:.4f}  |  ROC-AUC = {auc:.4f}",
                 fontsize=13, fontweight="bold", pad=12)
 
-plt.suptitle("Sepsis Classification — GSE57065 + GSE9960 + GSE95233",
+plt.suptitle("Sepsis Classification - GSE57065 + GSE9960 + GSE95233",
              fontsize=14, fontweight="bold", y=1.01)
 plt.tight_layout()
 

@@ -1,5 +1,5 @@
 """
-SepsisAI — FastAPI Application Entry Point
+SepsisAI - FastAPI Application Entry Point
 Research-grade sepsis risk prediction from gene expression data.
 """
 
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Application lifespan handler — runs startup / shutdown logic."""
+    """Application lifespan handler - runs startup / shutdown logic."""
     logger.info("SepsisAI API starting up …")
     # Create all DB tables (no-op if they already exist)
     Base.metadata.create_all(bind=engine)
@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="SepsisAI — Sepsis Risk Prediction API",
+    title="SepsisAI - Sepsis Risk Prediction API",
     description=(
         "Research-grade REST API for predicting sepsis risk from patient gene "
         "expression data.  Endpoints support CSV upload, manual JSON input, "
@@ -70,7 +70,7 @@ app = FastAPI(
 )
 
 # ---------------------------------------------------------------------------
-# CORS — allow both Vite dev-server (5173) and Create-React-App (3000)
+# CORS - allow both Vite dev-server (5173) and Create-React-App (3000)
 # ---------------------------------------------------------------------------
 app.add_middleware(
     CORSMiddleware,

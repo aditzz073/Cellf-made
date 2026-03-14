@@ -26,9 +26,9 @@ function emptyGenes() {
  * ManualInputForm
  *
  * Props:
- *   onGenesChange({ [gene]: string }) — called on every input change
- *   values  — controlled gene values object
- *   errors  — { [gene]: string } field-level errors
+ *   onGenesChange({ [gene]: string }) - called on every input change
+ *   values  - controlled gene values object
+ *   errors  - { [gene]: string } field-level errors
  */
 export default function ManualInputForm({ onGenesChange, values = {}, errors = {} }) {
   function handleChange(gene, val) {
@@ -75,7 +75,7 @@ export default function ManualInputForm({ onGenesChange, values = {}, errors = {
           onClick={handleClear}
           style={{ color: 'var(--color-text-dim)', marginLeft: 'auto' }}
         >
-          ✕ Clear
+          <ClearIcon /> Clear
         </button>
       </div>
 
@@ -146,5 +146,12 @@ export default function ManualInputForm({ onGenesChange, values = {}, errors = {
     </div>
   );
 }
+
+const ClearIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
 
 export { emptyGenes, ALL_GENES };

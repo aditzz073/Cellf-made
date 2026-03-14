@@ -12,7 +12,7 @@ import { REFERENCE_BASELINE } from '../constants.js';
  * HeatmapViewer
  *
  * Props:
- *   featureImportances — array of { gene, impact, expression, baseline }
+ *   featureImportances - array of { gene, impact, expression, baseline }
  */
 export default function HeatmapViewer({ featureImportances }) {
   const divRef = useRef(null);

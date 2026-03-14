@@ -3,17 +3,34 @@ import CSVUpload from './CSVUpload.jsx';
 import PasteCSV from './PasteCSV.jsx';
 
 const TABS = [
-  { id: 'upload', label: 'Upload GEO CSV', icon: '📂' },
-  { id: 'paste',  label: 'Paste GEO CSV',  icon: '📋' },
+  {
+    id: 'upload',
+    label: 'Upload GEO CSV',
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
+  {
+    id: 'paste',
+    label: 'Paste GEO CSV',
+    icon: (
+      <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+        <rect x="8" y="4" width="8" height="4" rx="1" />
+        <path d="M8 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    ),
+  },
 ];
 
 /**
- * DataInput — three-tab gene expression input page.
+ * DataInput - three-tab gene expression input page.
  *
  * Props:
  *   onSubmit({ type, data, patientId })
  *   onBack()
- *   externalError — string
+ *   externalError - string
  *   onClearError()
  */
 export default function DataInput({ onSubmit, onBack, externalError, onClearError }) {
@@ -74,7 +91,7 @@ export default function DataInput({ onSubmit, onBack, externalError, onClearErro
             </button>
             <div className="w-px h-4 bg-slate-200" />
             <div className="flex items-center gap-2">
-              <span className="text-lg">🧬</span>
+              <img src="/dna.png" alt="SepsisAI" className="w-5 h-5 object-contain" />
               <span className="font-bold text-navy-700 text-base">SepsisAI</span>
             </div>
           </div>
@@ -89,7 +106,7 @@ export default function DataInput({ onSubmit, onBack, externalError, onClearErro
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-navy-700 mb-1.5">Gene Expression Input</h2>
           <p className="text-sm text-slate-500">
-            Provide one-sample GEO-format expression data with wide feature columns (for example, V1...V24840).
+            Provide one-sample GEO expression data using the downloaded template (SampleID + top biomarker probe columns).
           </p>
         </div>
 

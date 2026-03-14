@@ -2,7 +2,7 @@
 routes/report.py
 ----------------
 Endpoint:
-  POST /generate-report — generate and download a PDF clinical report
+  POST /generate-report - generate and download a PDF clinical report
 """
 
 import logging

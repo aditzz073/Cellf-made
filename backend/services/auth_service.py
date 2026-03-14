@@ -1,5 +1,5 @@
 """
-services/auth_service.py — Password hashing, user CRUD, current-user extraction.
+services/auth_service.py - Password hashing, user CRUD, current-user extraction.
 """
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
@@ -52,7 +52,7 @@ def create_user(db: Session, name: str, email: str, password: str, blood_group: 
 
 
 # ---------------------------------------------------------------------------
-# FastAPI dependency — resolve current user from Bearer token
+# FastAPI dependency - resolve current user from Bearer token
 # ---------------------------------------------------------------------------
 
 def get_current_user(

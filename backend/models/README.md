@@ -45,7 +45,7 @@ This order is defined in `services/model_loader.py → FEATURE_ORDER`.
    with open("backend/models/sepsis_scaler.pkl", "wb") as f:
        pickle.dump(scaler, f)
    ```
-3. Restart the API — `model_loader.load_model()` detects the files on startup.
+3. Restart the API - `model_loader.load_model()` detects the files on startup.
 
 ## Current state
 

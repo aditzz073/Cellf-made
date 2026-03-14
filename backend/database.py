@@ -1,5 +1,5 @@
 """
-database.py — SQLAlchemy database setup.
+database.py - SQLAlchemy database setup.
 Uses SQLite for prototyping; swap DATABASE_URL env var for Postgres in production.
 """
 import os
@@ -21,7 +21,7 @@ class Base(DeclarativeBase):
 
 
 def get_db():
-    """FastAPI dependency — yields a DB session and always closes it."""
+    """FastAPI dependency - yields a DB session and always closes it."""
     db = SessionLocal()
     try:
         yield db

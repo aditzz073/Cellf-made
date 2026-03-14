@@ -50,7 +50,7 @@ def get_gene_impacts(
           { gene, impact, expression, baseline }
     """
     if not _is_ready or _model is None or _scaler is None or not _top100:
-        logger.warning("Model artifacts not ready — no feature impacts generated.")
+        logger.warning("Model artifacts not ready - no feature impacts generated.")
         return []
 
     if gene_values is None:
@@ -70,8 +70,9 @@ def get_gene_impacts(
     safe_scale = np.where(scale == 0, 1.0, scale)
     weights    = _get_importance_weights()
 
+    normalized_values = {str(k).strip().lower(): float(v) for k, v in gene_values.items()}
     x = np.array(
-        [gene_values.get(p, float(baseline[i])) for i, p in enumerate(_top100)],
+        [normalized_values.get(p.strip().lower(), float(baseline[i])) for i, p in enumerate(_top100)],
         dtype=float,
     )
 

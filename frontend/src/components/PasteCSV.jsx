@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
-const PLACEHOLDER = `SampleID,V1,V2,V3,V4,V5
-SAMPLE_001,7.231,-1.031,0.448,5.102,2.778`;
+const PLACEHOLDER = `SampleID,226879_at,205844_at,227867_at
+SAMPLE_001,7.231,-1.031,0.448`;
 
 /**
  * Parses a wide CSV text (header + one sample row) into a { feature: value } map.
@@ -35,15 +35,17 @@ function parseCSVText(text) {
     return { features, errors };
   }
 
-  const featureColumns = header.filter((column) => /^V\d+$/i.test(column));
+  const featureColumns = header.filter(
+    (column) => column && !['sampleid', 'sample_id', 'id', 'patient_id'].includes(column.toLowerCase())
+  );
   if (featureColumns.length === 0) {
-    errors.push('No V-feature columns detected (expected columns like V1, V2, V3...).');
+    errors.push('No probe feature columns detected in header.');
     return { features, errors };
   }
 
   for (let idx = 0; idx < header.length; idx += 1) {
     const column = header[idx];
-    if (!/^V\d+$/i.test(column)) continue;
+    if (!featureColumns.includes(column)) continue;
 
     const raw = row[idx];
     const value = Number(raw);
@@ -58,11 +60,11 @@ function parseCSVText(text) {
 }
 
 /**
- * PasteCSV — textarea for pasting raw CSV data, with live parse preview.
+ * PasteCSV - textarea for pasting raw CSV data, with live parse preview.
  *
  * Props:
- *   onFeaturesChange({ [feature]: number }) — called when a valid parse succeeds
- *   onClearFeatures()                      — called when pasted text is cleared
+ *   onFeaturesChange({ [feature]: number }) - called when a valid parse succeeds
+ *   onClearFeatures()                      - called when pasted text is cleared
  */
 export default function PasteCSV({ onFeaturesChange, onClearFeatures }) {
   const [text, setText]     = useState('');
@@ -102,7 +104,7 @@ export default function PasteCSV({ onFeaturesChange, onClearFeatures }) {
         fontSize: '0.82rem',
         color: 'var(--color-navy)',
       }}>
-        Paste a wide GEO-style CSV with one sample row and feature columns like V1, V2, V3, ...
+        Paste a wide GEO-style CSV with one sample row and probe columns from the template.
       </div>
 
       {/* Textarea */}
@@ -124,11 +126,11 @@ export default function PasteCSV({ onFeaturesChange, onClearFeatures }) {
           onClick={handleParse}
           disabled={!text.trim()}
         >
-          ▶ Parse CSV
+          <ParseIcon /> Parse CSV
         </button>
         {text && (
           <button type="button" className="btn btn-secondary" onClick={handleClear}>
-            ✕ Clear
+            <ClearIcon /> Clear
           </button>
         )}
       </div>
@@ -148,7 +150,7 @@ export default function PasteCSV({ onFeaturesChange, onClearFeatures }) {
           ) : (
             <div className="alert alert-success">
               <div>
-                <strong>✓ {Object.keys(parsed.features).length} features parsed successfully</strong>
+                <strong><SuccessIcon /> {Object.keys(parsed.features).length} features parsed successfully</strong>
                 <div style={{ marginTop: '0.75rem', display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                   {Object.entries(parsed.features).slice(0, 12).map(([g, v]) => (
                     <span key={g} style={{
@@ -177,3 +179,22 @@ export default function PasteCSV({ onFeaturesChange, onClearFeatures }) {
     </div>
   );
 }
+
+const ParseIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
+
+const ClearIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+const SuccessIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline-block', verticalAlign: 'text-bottom', marginRight: '0.2rem' }} aria-hidden="true">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);

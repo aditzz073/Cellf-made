@@ -1,6 +1,6 @@
 /**
  * pages/Home.jsx
- * Main page — two-column layout: input panel (left) + results panel (right).
+ * Main page - two-column layout: input panel (left) + results panel (right).
  * Manages all application state and orchestrates API calls.
  */
 
@@ -11,8 +11,8 @@ import ResultsPanel from '../components/ResultsPanel.jsx';
 import { predictFromCSV, predictFromGenes } from '../api/client.js';
 
 const TABS = [
-  { id: 'csv',    label: '📄 CSV Upload' },
-  { id: 'manual', label: '✏️  Manual Entry' },
+  { id: 'csv', label: 'CSV Upload', Icon: CSVTabIcon },
+  { id: 'manual', label: 'Manual Entry', Icon: ManualTabIcon },
 ];
 
 export default function Home() {
@@ -93,7 +93,7 @@ export default function Home() {
                     className={`tab-btn${activeTab === t.id ? ' active' : ''}`}
                     onClick={() => { setActiveTab(t.id); handleReset(); }}
                   >
-                    {t.label}
+                    <t.Icon /> {t.label}
                   </button>
                 ))}
               </div>
@@ -153,7 +153,7 @@ function ErrorDisplay({ error, onDismiss }) {
         type="button"
         onClick={onDismiss}
         style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: '1rem', padding: 0 }}
-      >✕</button>
+      ><CloseIcon /></button>
     </div>
   );
 }
@@ -161,7 +161,7 @@ function ErrorDisplay({ error, onDismiss }) {
 function InfoBox({ title, text, accent = '#14b8a6' }) {
   return (
     <div style={{ ...styles.infoBox, borderColor: `${accent}33`, background: `${accent}08` }}>
-      <div style={{ ...styles.infoTitle, color: accent }}>ℹ {title}</div>
+      <div style={{ ...styles.infoTitle, color: accent }}><InfoIcon /> {title}</div>
       <p style={styles.infoText}>{text}</p>
     </div>
   );
@@ -180,6 +180,35 @@ function formatError(err) {
 const InputIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+  </svg>
+);
+
+const CSVTabIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+    <polyline points="14 2 14 8 20 8" />
+  </svg>
+);
+
+const ManualTabIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 20h9" />
+    <path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4Z" />
+  </svg>
+);
+
+const InfoIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="16" x2="12" y2="12" />
+    <line x1="12" y1="8" x2="12.01" y2="8" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
   </svg>
 );
 

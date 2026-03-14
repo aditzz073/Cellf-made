@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
 /**
- * ValidationStatus — animated step-by-step validation display.
+ * ValidationStatus - animated step-by-step validation display.
  *
  * Props:
- *   steps      — array of { label: string, detail: string, status: 'pending'|'ok'|'error' }
- *   onComplete — callback(allPassed: boolean) called after all steps animate through
+ *   steps      - array of { label: string, detail: string, status: 'pending'|'ok'|'error' }
+ *   onComplete - callback(allPassed: boolean) called after all steps animate through
  */
 export default function ValidationStatus({ steps = [], onComplete }) {
   const [revealed, setRevealed] = useState(0);
@@ -40,7 +40,24 @@ export default function ValidationStatus({ steps = [], onComplete }) {
       }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>🔍</div>
+          <div style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'center' }}>
+            <span style={{
+              width: 36,
+              height: 36,
+              borderRadius: '50%',
+              background: 'var(--color-accent-lt)',
+              border: '1px solid #bfdbfe',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--color-accent)',
+            }}>
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <circle cx="11" cy="11" r="6" />
+                <path d="m20 20-4.2-4.2" strokeLinecap="round" />
+              </svg>
+            </span>
+          </div>
           <h2 style={{ fontSize: '1.2rem', color: 'var(--color-navy)', marginBottom: '0.35rem' }}>
             Validating Input Data
           </h2>
@@ -99,7 +116,7 @@ export default function ValidationStatus({ steps = [], onComplete }) {
                   color: isPending ? 'var(--color-text-dim)' : '#fff',
                   fontWeight: 700,
                 }}>
-                  {isPending ? i + 1 : isError ? '✕' : '✓'}
+                  {isPending ? i + 1 : isError ? <ErrorIcon /> : <CheckIcon />}
                 </div>
 
                 {/* Text */}
@@ -150,3 +167,16 @@ export default function ValidationStatus({ steps = [], onComplete }) {
     </div>
   );
 }
+
+const CheckIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const ErrorIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);

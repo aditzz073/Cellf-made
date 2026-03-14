@@ -32,12 +32,12 @@ function computeSimilarities(riskScore) {
 }
 
 /**
- * CohortComparison — shows patient expression profile similarity
+ * CohortComparison - shows patient expression profile similarity
  * to reference GEO cohort populations as horizontal bar charts.
  *
  * Props:
- *   riskScore         — 0–1 float (drives the similarity calculation)
- *   featureImportances — not currently used, reserved for future UMAP
+ *   riskScore         - 0–1 float (drives the similarity calculation)
+ *   featureImportances - not currently used, reserved for future UMAP
  */
 export default function CohortComparison({ riskScore = 0 }) {
   const cohorts = useMemo(() => computeSimilarities(riskScore), [riskScore]);

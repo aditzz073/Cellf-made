@@ -15,11 +15,11 @@ const GENE_ROLES = {
 };
 
 /**
- * GeneSignatureExplorer — cBioPortal-style gene table with
+ * GeneSignatureExplorer - cBioPortal-style gene table with
  * biological roles, fold change, and impact bars.
  *
  * Props:
- *   featureImportances — [{gene, impact, expression, baseline?}, ...]
+ *   featureImportances - [{gene, impact, expression, baseline?}, ...]
  */
 export default function GeneSignatureExplorer({ featureImportances }) {
   const [sortBy,  setSortBy]  = useState('impact');
@@ -30,7 +30,7 @@ export default function GeneSignatureExplorer({ featureImportances }) {
   const enriched = featureImportances.map(f => ({
     ...f,
     baseline: f.baseline ?? REFERENCE_BASELINE[f.gene] ?? 0,
-    meta: GENE_ROLES[f.gene] ?? { role: 'Unknown', fn: '—', dir: 'mixed' },
+    meta: GENE_ROLES[f.gene] ?? { role: 'Unknown', fn: '-', dir: 'mixed' },
   }));
 
   const sorted = [...enriched].sort((a, b) => {

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 const DIRECTION_META = {
   up:   { label: '↑ Risk',     color: 'var(--color-risk-high)', bg: 'var(--color-risk-high-bg)' },
   down: { label: '↓ Protect',  color: 'var(--color-risk-low)',  bg: 'var(--color-risk-low-bg)' },
-  neutral: { label: '—',       color: 'var(--color-text-muted)', bg: 'transparent' },
+  neutral: { label: '-',       color: 'var(--color-text-muted)', bg: 'transparent' },
 };
 
 function directionOf(impact) {
@@ -13,10 +13,10 @@ function directionOf(impact) {
 }
 
 /**
- * GeneTable — feature importance table derived from /explain response.
+ * GeneTable - feature importance table derived from /explain response.
  *
  * Props:
- *   featureImportances — array of { gene, impact, expression, baseline }
+ *   featureImportances - array of { gene, impact, expression, baseline }
  */
 export default function GeneTable({ featureImportances = [] }) {
   const [sortKey, setSortKey] = useState('absImpact');

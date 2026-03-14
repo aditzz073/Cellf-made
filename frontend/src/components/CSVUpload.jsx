@@ -10,8 +10,8 @@ import { API } from '../services/api.js';
  * CSVUpload
  *
  * Props:
- *   onFileSelected(file) — called when a valid file is chosen (does NOT auto-submit)
- *   selectedFile         — current File | null (controlled)
+ *   onFileSelected(file) - called when a valid file is chosen (does NOT auto-submit)
+ *   selectedFile         - current File | null (controlled)
  */
 export default function CSVUpload({ onFileSelected, selectedFile }) {
   const [dragOver, setDragOver] = useState(false);
@@ -71,9 +71,14 @@ export default function CSVUpload({ onFileSelected, selectedFile }) {
           type="button"
           className="btn btn-secondary btn-sm"
           onClick={() => API.downloadTemplate()}
-          style={{ color: 'var(--color-accent)', borderColor: '#93c5fd' }}
+          style={{ color: 'var(--color-accent)', borderColor: '#93c5fd', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
         >
-          ↓ Download CSV Template
+          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M12 3v12" strokeLinecap="round" />
+            <path d="M7 10l5 5 5-5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M5 20h14" strokeLinecap="round" />
+          </svg>
+          Download CSV Template
         </button>
       </div>
 
@@ -107,7 +112,23 @@ export default function CSVUpload({ onFileSelected, selectedFile }) {
 
         {selectedFile ? (
           <div>
-            <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>✅</div>
+            <div style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'center' }}>
+              <span style={{
+                width: 36,
+                height: 36,
+                borderRadius: '50%',
+                background: 'var(--color-risk-low-bg)',
+                border: '1px solid var(--color-risk-low-bd)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'var(--color-risk-low)',
+              }}>
+                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+                  <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+            </div>
             <p style={{
               fontWeight: 600,
               color: 'var(--color-risk-low)',
@@ -123,18 +144,26 @@ export default function CSVUpload({ onFileSelected, selectedFile }) {
               type="button"
               className="btn btn-secondary btn-sm"
               onClick={(e) => { e.stopPropagation(); handleClear(); }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
             >
-              ✕ Remove file
+              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" />
+              </svg>
+              Remove file
             </button>
           </div>
         ) : (
           <div>
-            <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem', opacity: 0.6 }}>📂</div>
+            <div style={{ marginBottom: '0.5rem', display: 'flex', justifyContent: 'center', opacity: 0.7 }}>
+              <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-dim)" strokeWidth={1.8}>
+                <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
             <p style={{ fontWeight: 600, color: 'var(--color-navy)', fontSize: '0.95rem', marginBottom: '0.3rem' }}>
               Drop your GEO expression CSV here
             </p>
             <p style={{ fontSize: '0.8rem', color: 'var(--color-text-muted)', marginBottom: '0.75rem' }}>
-              one sample row with feature columns (V1...V24840)
+              one sample row with probe columns from the downloaded template
             </p>
             <span style={{
               display: 'inline-block',
@@ -153,7 +182,12 @@ export default function CSVUpload({ onFileSelected, selectedFile }) {
 
       {localError && (
         <div className="alert alert-error" style={{ marginTop: '0.75rem' }}>
-          ⚠ {localError}
+          <svg className="w-4 h-4 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+            <path d="M12 9v4" strokeLinecap="round" />
+            <circle cx="12" cy="17" r="1" />
+            <path d="M10.3 3.8 1.8 18.2a2 2 0 0 0 1.7 3h16.9a2 2 0 0 0 1.7-3L13.7 3.8a2 2 0 0 0-3.4 0z" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span>{localError}</span>
         </div>
       )}
     </div>

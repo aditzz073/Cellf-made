@@ -1,4 +1,4 @@
-# Cellf-made — SepsisAI
+# Cellf-made - SepsisAI
 
 > **AI-Powered Sepsis Risk Prediction from Immune Transcriptomic Data**
 
@@ -10,7 +10,7 @@ A research-grade full-stack web application for early sepsis detection using gen
 
 ## Problem Statement
 
-Sepsis is a life-threatening medical emergency caused by a dysregulated immune response to infection. Despite being one of the leading causes of ICU mortality worldwide, it is typically diagnosed only after observable signs of organ dysfunction emerge — by which point the intervention window has often narrowed.
+Sepsis is a life-threatening medical emergency caused by a dysregulated immune response to infection. Despite being one of the leading causes of ICU mortality worldwide, it is typically diagnosed only after observable signs of organ dysfunction emerge - by which point the intervention window has often narrowed.
 
 **Cellf-made** moves detection upstream by targeting the molecular changes that *drive* that cascade, not the symptoms it produces.
 
@@ -105,14 +105,14 @@ Cellf-made/
 
 ---
 
-### 1 — Clone & enter the repo
+### 1 - Clone & enter the repo
 
 ```bash
 git clone <your-repo-url>
 cd Cellf-made
 ```
 
-### 2 — Backend setup
+### 2 - Backend setup
 
 ```bash
 cd backend
@@ -134,7 +134,7 @@ Interactive docs: `http://localhost:8000/docs`
 
 ---
 
-### 3 — Frontend setup
+### 3 - Frontend setup
 
 In a second terminal:
 
@@ -151,7 +151,7 @@ Open `http://localhost:5173` in your browser.
 
 ---
 
-### 4 — Verify the stack
+### 4 - Verify the stack
 
 1. Backend running → visit `http://localhost:8000/health` → should return `{"status": "healthy"}`
 2. Frontend running → visit `http://localhost:5173` → landing page loads
@@ -175,11 +175,11 @@ SAMPLE_001,0,0,0,...,0
 
 ## How It Works
 
-1. **Sample Collection** — A blood sample is drawn from the patient.
-2. **Transcriptomic Profiling** — Immune expression matrix is prepared as a full GEO-style feature vector (V1...Vn).
-3. **AI-Driven Analysis** — `StandardScaler` preprocessing is applied, then a trained Random Forest predicts sepsis probability.
-4. **Risk Stratification** — Quantitative risk score (0–100%) with ranked feature impact analysis.
-5. **Clinical Report** — Structured PDF report for research documentation.
+1. **Sample Collection** - A blood sample is drawn from the patient.
+2. **Transcriptomic Profiling** - Immune expression matrix is prepared as a full GEO-style feature vector (V1...Vn).
+3. **AI-Driven Analysis** - `StandardScaler` preprocessing is applied, then a trained Random Forest predicts sepsis probability.
+4. **Risk Stratification** - Quantitative risk score (0–100%) with ranked feature impact analysis.
+5. **Clinical Report** - Structured PDF report for research documentation.
 
 ---
 

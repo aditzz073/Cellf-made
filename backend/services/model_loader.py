@@ -71,7 +71,7 @@ def _load_top100(model, scaler) -> list[str]:
                 logger.info("Loaded %d top biomarkers from %s", len(probes), TOP100_PATH)
                 return [str(p) for p in probes]
         except Exception as exc:
-            logger.warning("Failed to read %s: %s — deriving from model.", TOP100_PATH, exc)
+            logger.warning("Failed to read %s: %s - deriving from model.", TOP100_PATH, exc)
 
     # Derive from model importances
     if hasattr(model, "feature_importances_") and hasattr(scaler, "feature_names_in_"):
@@ -82,7 +82,7 @@ def _load_top100(model, scaler) -> list[str]:
         logger.info("Derived top 100 biomarkers from RF feature importances.")
         return top100
 
-    logger.error("Cannot determine top-100 biomarkers — no JSON file and no feature_importances_.")
+    logger.error("Cannot determine top-100 biomarkers - no JSON file and no feature_importances_.")
     return []
 
 
@@ -130,7 +130,7 @@ def load_model_bundle() -> tuple[
     return model, scaler, top100, True
 
 
-# Module-level singleton — loaded once at startup
+# Module-level singleton - loaded once at startup
 _MODEL_BUNDLE = load_model_bundle()
 
 

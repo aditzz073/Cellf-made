@@ -12,7 +12,7 @@ from services.heatmap_generator import generate_heatmap_image
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-TOP_N_MAX = 100  # Hard cap — prevents callers from requesting all 24 840 features at once.
+TOP_N_MAX = 100  # Hard cap - prevents callers from requesting all 24 840 features at once.
 
 
 # ---------------------------------------------------------------------------
@@ -45,7 +45,7 @@ class GenePayload(BaseModel):
 @router.get(
     "/explain",
     tags=["Explainability"],
-    summary="Gene Feature Importances — Demo",
+    summary="Gene Feature Importances - Demo",
 )
 async def explain_demo():
     """
@@ -64,7 +64,7 @@ async def explain_demo():
 @router.post(
     "/explain",
     tags=["Explainability"],
-    summary="Gene Feature Importances — Patient-Specific",
+    summary="Gene Feature Importances - Patient-Specific",
 )
 async def explain(payload: Optional[GenePayload] = Body(default=None)):
     """
@@ -87,7 +87,7 @@ async def explain(payload: Optional[GenePayload] = Body(default=None)):
 @router.get(
     "/heatmap",
     tags=["Explainability"],
-    summary="Expression Heatmap — Demo",
+    summary="Expression Heatmap - Demo",
 )
 async def heatmap_demo():
     """
@@ -109,7 +109,7 @@ async def heatmap_demo():
 @router.post(
     "/heatmap",
     tags=["Explainability"],
-    summary="Expression Heatmap — Patient-Specific",
+    summary="Expression Heatmap - Patient-Specific",
 )
 async def heatmap(payload: Optional[GenePayload] = Body(default=None)):
     """

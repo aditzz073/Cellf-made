@@ -1,19 +1,19 @@
 import React from 'react';
 
 const RISK_META = {
-  High:     { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', badge: '#dc2626', dot: '🔴', label: 'HIGH RISK' },
-  Moderate: { color: '#d97706', bg: '#fffbeb', border: '#fed7aa', badge: '#d97706', dot: '🟡', label: 'MODERATE RISK' },
-  Low:      { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', badge: '#16a34a', dot: '🟢', label: 'LOW RISK' },
+  High:     { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', badge: '#dc2626', label: 'HIGH RISK' },
+  Moderate: { color: '#d97706', bg: '#fffbeb', border: '#fed7aa', badge: '#d97706', label: 'MODERATE RISK' },
+  Low:      { color: '#16a34a', bg: '#f0fdf4', border: '#bbf7d0', badge: '#16a34a', label: 'LOW RISK' },
 };
 
 /**
- * RiskCard — primary sepsis risk score display.
+ * RiskCard - primary sepsis risk score display.
  *
  * Props:
- *   riskScore   — 0–1 float
- *   riskLevel   — "High" | "Moderate" | "Low"
- *   confidence  — 0–1 float (optional)
- *   modelType   — string (optional)
+ *   riskScore   - 0–1 float
+ *   riskLevel   - "High" | "Moderate" | "Low"
+ *   confidence  - 0–1 float (optional)
+ *   modelType   - string (optional)
  */
 export default function RiskCard({ riskScore, riskLevel, confidence, modelType }) {
   const meta = RISK_META[riskLevel] ?? RISK_META.Moderate;
@@ -30,8 +30,23 @@ export default function RiskCard({ riskScore, riskLevel, confidence, modelType }
         style={{ background: meta.bg }}
       >
         {/* Watermark */}
-        <div className="absolute -right-3 -bottom-3 text-9xl opacity-[0.06] pointer-events-none select-none leading-none">
-          {meta.dot}
+        <div
+          className="absolute -right-6 -bottom-6 pointer-events-none"
+          style={{
+            width: 130,
+            height: 130,
+            borderRadius: '50%',
+            background: `radial-gradient(circle at 30% 30%, ${meta.color}22, ${meta.color}10 60%, transparent 70%)`,
+          }}
+        >
+          <div
+            style={{
+              position: 'absolute',
+              inset: 22,
+              borderRadius: '50%',
+              border: `2px solid ${meta.color}22`,
+            }}
+          />
         </div>
 
         {/* Label */}
@@ -74,7 +89,7 @@ export default function RiskCard({ riskScore, riskLevel, confidence, modelType }
         </div>
       </div>
 
-      {/* ── Confidence section — clean white area below colored band ── */}
+      {/* ── Confidence section - clean white area below colored band ── */}
       {confPct != null && (
         <div className="bg-white px-6 py-4 flex flex-col gap-3" style={{ borderTop: `2px solid ${meta.border}` }}>
           <div className="flex justify-between items-center">

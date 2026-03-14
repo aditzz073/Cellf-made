@@ -21,7 +21,7 @@ export default function Header() {
         {/* Status pills */}
         <div style={styles.pills}>
           <span style={{ ...styles.pill, ...styles.pillResearch }}>
-            ⚠ Research Use Only
+            <AlertIcon /> Research Use Only
           </span>
           <span style={{ ...styles.pill, ...styles.pillVersion }}>v1.0</span>
           <a
@@ -30,7 +30,7 @@ export default function Header() {
             rel="noreferrer"
             style={{ ...styles.pill, ...styles.pillDocs }}
           >
-            API Docs ↗
+            API Docs <ExternalLinkIcon />
           </a>
         </div>
       </div>
@@ -43,6 +43,23 @@ export default function Header() {
     </header>
   );
 }
+
+const AlertIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+    <line x1="12" y1="9" x2="12" y2="13" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+);
+
+const ExternalLinkIcon = () => (
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 3h7v7" />
+    <path d="M10 14L21 3" />
+    <path d="M21 14v7h-7" />
+    <path d="M3 10V3h7" />
+  </svg>
+);
 
 const styles = {
   header: {
@@ -96,6 +113,9 @@ const styles = {
     fontWeight: 600,
     letterSpacing: '0.03em',
     textDecoration: 'none',
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: '0.3rem',
   },
   pillResearch: {
     background: 'rgba(245,158,11,0.15)',

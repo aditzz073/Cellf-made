@@ -1,5 +1,5 @@
 """
-services/jwt_service.py — JWT creation and verification.
+services/jwt_service.py - JWT creation and verification.
 """
 import os
 from datetime import datetime, timedelta, timezone

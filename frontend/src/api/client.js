@@ -11,7 +11,7 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 60_000,   // 60 s — PDF generation can be slow
+  timeout: 60_000,   // 60 s - PDF generation can be slow
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ export async function predictFromGenes(genes) {
 }
 
 /**
- * GET /template — triggers CSV file download
+ * GET /template - triggers CSV file download
  */
 export function downloadTemplate() {
   const url = `${BASE_URL}/template`;
@@ -50,7 +50,7 @@ export function downloadTemplate() {
 }
 
 /**
- * POST /generate-report — returns a Blob for PDF download
+ * POST /generate-report - returns a Blob for PDF download
  * @param {{ patient_id: string, genes: object, prediction: object }} payload
  */
 export async function generateReport(payload) {

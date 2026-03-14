@@ -1,5 +1,5 @@
 """
-routes/auth.py — User authentication and profile management routes.
+routes/auth.py - User authentication and profile management routes.
 
 POST /auth/signup
 POST /auth/login

@@ -139,7 +139,7 @@ export default function ManualInput({ onSubmit, isLoading }) {
       {/* Global error count */}
       {Object.keys(errors).length > 0 && (
         <div className="alert alert-error" style={{ marginBottom: '0.75rem' }}>
-          <span>⚠</span>
+          <WarningIcon />
           Please correct <strong>{Object.keys(errors).length}</strong> field error(s) before submitting.
         </div>
       )}
@@ -149,11 +149,25 @@ export default function ManualInput({ onSubmit, isLoading }) {
         className="btn btn-primary btn-full"
         disabled={isLoading}
       >
-        {isLoading ? <><span className="spinner" /> Analysing…</> : '▶  Run Prediction'}
+        {isLoading ? <><span className="spinner" /> Analysing…</> : <><PlayIcon /> Run Prediction</>}
       </button>
     </form>
   );
 }
+
+const WarningIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+    <line x1="12" y1="9" x2="12" y2="13" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+);
+
+const PlayIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M8 5v14l11-7z" />
+  </svg>
+);
 
 // ── GeneGroup sub-component ───────────────────────────────────────────────────
 function GeneGroup({ title, titleColor, genes, values, errors, onChange }) {

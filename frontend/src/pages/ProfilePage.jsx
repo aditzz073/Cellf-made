@@ -99,8 +99,8 @@ export default function ProfilePage({ onBack }) {
             {initials}
           </div>
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-navy-700 truncate">{user?.name ?? '—'}</h1>
-            <p className="text-sm text-slate-500 truncate">{user?.email ?? '—'}</p>
+            <h1 className="text-xl font-bold text-navy-700 truncate">{user?.name ?? '-'}</h1>
+            <p className="text-sm text-slate-500 truncate">{user?.email ?? '-'}</p>
             {user?.blood_group && (
               <span className="inline-block mt-1 text-xs font-bold bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-full">
                 {user.blood_group}
@@ -160,7 +160,7 @@ export default function ProfilePage({ onBack }) {
                 className="w-full h-11 px-4 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-300 focus:border-blue-400 transition"
               >
                 {BLOOD_GROUPS.map(bg => (
-                  <option key={bg} value={bg}>{bg || '— Not specified —'}</option>
+                  <option key={bg} value={bg}>{bg || '- Not specified -'}</option>
                 ))}
               </select>
             </div>
@@ -210,13 +210,13 @@ export default function ProfilePage({ onBack }) {
 
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700 flex items-start gap-2">
-                <span className="mt-0.5">⚠</span> {error}
+                <span className="mt-0.5"><AlertIcon /></span> {error}
               </div>
             )}
 
             {success && (
               <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700 flex items-center gap-2">
-                <span>✓</span> {success}
+                <CheckIcon /> {success}
               </div>
             )}
 
@@ -239,3 +239,17 @@ export default function ProfilePage({ onBack }) {
     </div>
   );
 }
+
+const AlertIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+    <line x1="12" y1="9" x2="12" y2="13" />
+    <line x1="12" y1="17" x2="12.01" y2="17" />
+  </svg>
+);
+
+const CheckIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);

@@ -1,10 +1,10 @@
 /**
  * context/AuthContext.jsx
- * Global authentication state — wraps the whole app.
+ * Global authentication state - wraps the whole app.
  *
  * Provides:
- *   user        — null | { id, name, email, blood_group }
- *   loading     — bool (initial fetch in progress)
+ *   user        - null | { id, name, email, blood_group }
+ *   loading     - bool (initial fetch in progress)
  *   login(creds) → Promise  (calls /auth/login, refreshes user)
  *   signup(data) → Promise
  *   logout()
@@ -62,7 +62,7 @@ export function AuthProvider({ children }) {
   );
 }
 
-/** Hook — always call inside <AuthProvider> */
+/** Hook - always call inside <AuthProvider> */
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 
 /**
- * ConfidenceIndicator — SVG arc gauge for model confidence.
+ * ConfidenceIndicator - SVG arc gauge for model confidence.
  *
  * Props:
- *   confidence  — 0–1 float
- *   modelType   — string (optional)
+ *   confidence  - 0–1 float
+ *   modelType   - string (optional)
  */
 export default function ConfidenceIndicator({ confidence, modelType }) {
   const [tooltipVisible, setTooltipVisible] = useState(false);

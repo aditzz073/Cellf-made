@@ -8,7 +8,7 @@ Import from here instead of re-defining in each module.
 import os
 
 # ---------------------------------------------------------------------------
-# Gene panel — ordered list expected by the model / shown in the template
+# Gene panel - ordered list expected by the model / shown in the template
 # ---------------------------------------------------------------------------
 GENE_PANEL: list[str] = [
     "IL6", "TLR4", "HLA-DRA", "STAT3", "TNF",

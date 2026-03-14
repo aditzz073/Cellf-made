@@ -28,6 +28,7 @@ export const API = {
   async predictFromFile(file) {
     const form = new FormData();
     form.append('file', file);
+    console.log("=== API req CSV ===", form.get("file"));
     const { data } = await http.post('/predict', form, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
@@ -54,7 +55,7 @@ export const API = {
   },
 
   /**
-   * GET /template — triggers template CSV download via anchor click
+   * GET /template - triggers template CSV download via anchor click
    */
   downloadTemplate() {
     const a = document.createElement('a');
@@ -66,7 +67,7 @@ export const API = {
   },
 
   /**
-   * POST /generate-report — returns a Blob (application/pdf)
+   * POST /generate-report - returns a Blob (application/pdf)
    * @param {{ patient_id: string, genes: object, prediction: object }} payload
    * @returns {Promise<Blob>}
    */
@@ -84,7 +85,7 @@ export const API = {
  * @returns {string | { validationErrors: string[] }}
  */
 export function extractApiError(err) {
-  if (!err?.response) return err.message || 'Network error — is the backend running?';
+  if (!err?.response) return err.message || 'Network error - is the backend running?';
   const detail = err.response.data?.detail;
   if (!detail) return `Server error (${err.response.status})`;
   if (detail?.validation_errors) return { validationErrors: detail.validation_errors };

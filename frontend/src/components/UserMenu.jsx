@@ -59,7 +59,11 @@ export default function UserMenu({ onProfile }) {
             onClick={() => { setOpen(false); onProfile?.(); }}
             className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 transition-colors"
           >
-            <span>👤</span> My Profile
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <circle cx="12" cy="8" r="3.5" />
+              <path d="M5 20a7 7 0 0 1 14 0" strokeLinecap="round" />
+            </svg>
+            My Profile
           </button>
 
           <div className="border-t border-slate-100" />
@@ -68,7 +72,12 @@ export default function UserMenu({ onProfile }) {
             onClick={() => { setOpen(false); logout(); }}
             className="w-full text-left flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
           >
-            <span>→</span> Sign Out
+            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+              <path d="M9 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4" strokeLinecap="round" />
+              <path d="M16 17l5-5-5-5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M21 12H9" strokeLinecap="round" />
+            </svg>
+            Sign Out
           </button>
         </div>
       )}

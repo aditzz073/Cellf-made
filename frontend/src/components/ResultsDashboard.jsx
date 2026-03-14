@@ -8,12 +8,12 @@ import ReportDownload        from './ReportDownload.jsx';
 import { useAuth }           from '../context/AuthContext.jsx';
 
 /**
- * ResultsDashboard — cBioPortal-style results page.
+ * ResultsDashboard - cBioPortal-style results page.
  *
  * Props:
- *   results       — API response from /predict enriched with patientId
- *   onNewAnalysis — back to input view
- *   onGoHome      — back to landing page
+ *   results       - API response from /predict enriched with patientId
+ *   onNewAnalysis - back to input view
+ *   onGoHome      - back to landing page
  */
 export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
   const [mode, setMode] = useState('clinical'); // 'clinical' | 'research'

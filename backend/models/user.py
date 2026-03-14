@@ -1,5 +1,5 @@
 """
-models/user.py — SQLAlchemy User model.
+models/user.py - SQLAlchemy User model.
 """
 from datetime import datetime, timezone
 from sqlalchemy import Column, Integer, String, DateTime

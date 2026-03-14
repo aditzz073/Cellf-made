@@ -1,5 +1,5 @@
 /**
- * App.jsx — Root application component.
+ * App.jsx - Root application component.
  *
  * View state machine:
  *   'landing'   → LandingPage
@@ -47,17 +47,18 @@ async function buildFileValidationSteps(file) {
 
   const header = lines[0].split(',').map(h => h.replace(/^"|"$/g, '').trim());
 
-  // Accept long-format GEO CSVs (ProbeID + Expression columns)
+  // Accept long-format GEO CSVs (ProbeID + sample columns)
   const isLongFormat = header.includes('ProbeID') || header.includes('Expression');
-  // Also accept wide-format V-feature CSVs
-  const vFeatureCols = header.filter(h => /^V\d+$/i.test(h));
+  // Accept wide-format probe-column CSVs (any non-ProbeID columns, one sample row)
+  const nonProbeColumns = header.filter(h => h !== 'ProbeID');
+  const isWideFormat = !isLongFormat && nonProbeColumns.length >= 2;
 
-  if (!isLongFormat && vFeatureCols.length === 0) {
+  if (!isLongFormat && !isWideFormat) {
     return [
       ...steps,
       {
         label: 'Checking CSV format',
-        detail: 'Expected either a ProbeID/Expression long-format GEO CSV or a wide-format CSV with V-feature columns.',
+        detail: 'Expected either a ProbeID long-format CSV or a wide-format single-row CSV with probe columns.',
         status: 'error',
       },
     ];
@@ -66,7 +67,7 @@ async function buildFileValidationSteps(file) {
   if (isLongFormat) {
     steps.push({ label: 'Checking CSV format', detail: `Long-format GEO CSV detected (${lines.length - 1} probe rows)`, status: 'ok' });
   } else {
-    steps.push({ label: 'Checking CSV format', detail: `Wide-format CSV detected (${vFeatureCols.length} V-feature columns)`, status: 'ok' });
+    steps.push({ label: 'Checking CSV format', detail: `Wide-format CSV detected (${header.length - 1} probe columns)`, status: 'ok' });
   }
 
   steps.push({ label: 'Sending for backend validation', detail: 'Full validation performed server-side', status: 'ok' });
@@ -150,7 +151,13 @@ function AppInner() {
       setView('results');
     } catch (err) {
       const msg = extractApiError(err);
-      setInputError(typeof msg === 'string' ? msg : 'Analysis failed. Please check the backend and try again.');
+      if (typeof msg === 'string') {
+        setInputError(msg);
+      } else if (msg?.validationErrors?.length) {
+        setInputError(msg.validationErrors.join(' | '));
+      } else {
+        setInputError('Analysis failed. Please check the backend and try again.');
+      }
       setView('input');
     }
   }, [pendingData]);

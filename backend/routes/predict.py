@@ -1,4 +1,4 @@
-"""Prediction endpoints — accepts long-format GEO CSV or JSON feature dict."""
+"""Prediction endpoints - accepts long-format GEO CSV or JSON feature dict."""
 
 import io
 import csv
@@ -49,7 +49,7 @@ class FeatureInputPayload(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# GET /template  — long-format CSV download
+# GET /template  - long-format CSV download
 # ---------------------------------------------------------------------------
 
 @router.get(
@@ -219,7 +219,7 @@ async def predict(request: Request):
     heatmap_b64 = generate_heatmap_image(feature_values, feature_importances)
 
     logger.info(
-        "Prediction complete — risk_level=%s risk_score=%.4f probes=%d",
+        "Prediction complete - risk_level=%s risk_score=%.4f probes=%d",
         prediction["risk_level"],
         prediction["risk_score"],
         len(feature_values),
