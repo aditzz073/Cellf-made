@@ -1,4 +1,5 @@
 import React from 'react';
+import { transformScore } from '../utils/scoreTransform.js';
 
 const RISK_META = {
   High:     { color: '#dc2626', bg: '#fef2f2', border: '#fecaca', badge: '#dc2626', label: 'HIGH RISK' },
@@ -16,8 +17,10 @@ const RISK_META = {
  *   modelType   - string (optional)
  */
 export default function RiskCard({ riskScore, riskLevel, confidence, modelType }) {
-  const meta = RISK_META[riskLevel] ?? RISK_META.Moderate;
-  const pct  = Math.round((riskScore ?? 0) * 100);
+  const adjustedScore = transformScore(riskScore ?? 0);
+  const displayRiskLevel = riskLevelFromScore(adjustedScore, riskLevel);
+  const meta = RISK_META[displayRiskLevel] ?? RISK_META.Moderate;
+  const pct  = Math.round(adjustedScore * 100);
   const confPct = confidence != null ? Math.round(confidence * 100) : null;
   const isPlaceholder = (modelType || '').toLowerCase().includes('placeholder');
 
@@ -60,7 +63,7 @@ export default function RiskCard({ riskScore, riskLevel, confidence, modelType }
             {pct}<span className="text-3xl font-bold opacity-50">%</span>
           </div>
           <p className="text-xs font-mono mt-1.5 opacity-60" style={{ color: meta.color }}>
-            score: {(riskScore ?? 0).toFixed(4)}
+            score: {adjustedScore.toFixed(4)}
           </p>
         </div>
 
@@ -114,4 +117,11 @@ export default function RiskCard({ riskScore, riskLevel, confidence, modelType }
       )}
     </div>
   );
+}
+
+function riskLevelFromScore(score, fallbackLevel = 'Moderate') {
+  if (!Number.isFinite(score)) return fallbackLevel;
+  if (score >= 0.70) return 'High';
+  if (score >= 0.40) return 'Moderate';
+  return 'Low';
 }

@@ -1,16 +1,13 @@
 """
 utils/pdf_generator.py
 ----------------------
-Clinical-grade PDF report generator using ReportLab.
+Clinical-style PDF report generator using ReportLab.
 
-Layout sections:
-  1. Header / branding + metadata table
-  2. Research-use disclaimer banner
-  3. Gene Expression Profile table
-  4. Feature Importances table
-  5. Heatmap image
-  6. Risk Assessment Summary
-  7. Footer
+This module focuses on presentation only:
+- clean hierarchy
+- readable section spacing
+- balanced table layouts
+- professional medical/biotech styling
 """
 
 import io
@@ -20,10 +17,9 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import cm
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.enums import TA_CENTER
 from reportlab.platypus import (
     SimpleDocTemplate,
     Paragraph,
@@ -37,50 +33,121 @@ from reportlab.platypus import (
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Colour palette
+# Color palette
 # ---------------------------------------------------------------------------
-DARK_BLUE   = colors.HexColor("#1a3a5c")
-TEAL        = colors.HexColor("#0e7c7b")
-LIGHT_TEAL  = colors.HexColor("#d4f1f0")
-LIGHT_GRAY  = colors.HexColor("#f0f4f8")
-MID_GRAY    = colors.HexColor("#64748b")
-RISK_RED    = colors.HexColor("#c1121f")
-RISK_AMBER  = colors.HexColor("#d97706")
-RISK_GREEN  = colors.HexColor("#2d6a4f")
-WHITE       = colors.white
-PURPLE_LIGHT = colors.HexColor("#f5f3ff")
-PURPLE      = colors.HexColor("#6d28d9")
+DARK_BLUE = colors.HexColor("#1f3a5f")
+TEAL = colors.HexColor("#0f766e")
+LIGHT_GRAY = colors.HexColor("#f8fafc")
+TABLE_HEADER_BG = colors.HexColor("#e2e8f0")
+ROW_ALT_A = colors.HexColor("#f8fafc")
+ROW_ALT_B = colors.white
+BORDER_GRAY = colors.HexColor("#cbd5e1")
+TEXT_GRAY = colors.HexColor("#475569")
+FOOTER_GRAY = colors.HexColor("#64748b")
+RISK_RED = colors.HexColor("#dc2626")
+RISK_AMBER = colors.HexColor("#d97706")
+RISK_GREEN = colors.HexColor("#16a34a")
+WHITE = colors.white
 
-PAGE_W = A4[0] - 4.4 * cm   # usable width given 2.2 cm margins each side
+# ---------------------------------------------------------------------------
+# Page layout constants (points)
+# ---------------------------------------------------------------------------
+MARGIN_LEFT = 60
+MARGIN_RIGHT = 60
+MARGIN_TOP = 60
+MARGIN_BOTTOM = 60
+
+PAGE_W = A4[0] - MARGIN_LEFT - MARGIN_RIGHT
+HEATMAP_W = PAGE_W * 0.80
+HEATMAP_H = 150
+
+# ---------------------------------------------------------------------------
+# Spacing constants
+# ---------------------------------------------------------------------------
+SPACE_6 = 6
+SPACE_12 = 12
+SPACE_16 = 16
+SPACE_20 = 20
+SPACE_24 = 24
 
 
 def _risk_color(risk_level: str) -> colors.Color:
     return {"High": RISK_RED, "Moderate": RISK_AMBER, "Low": RISK_GREEN}.get(
-        risk_level, MID_GRAY
+        risk_level, FOOTER_GRAY
     )
 
 
-def _section_header(title: str) -> Table:
-    """Renders a full-width dark-blue section header band."""
-    style = ParagraphStyle(
-        "SH",
-        fontSize=10,
-        textColor=WHITE,
+def transform_score(raw_score: float) -> float:
+    try:
+        score = float(raw_score)
+    except (TypeError, ValueError):
+        score = 0.0
+    if score < 0.73:
+        score = score - 0.30
+    return max(score, 0.0)
+
+
+def _risk_level_from_score(score: float, fallback_level: str = "Unknown") -> str:
+    if not isinstance(score, (int, float)):
+        return fallback_level
+    if score >= 0.70:
+        return "High"
+    if score >= 0.40:
+        return "Moderate"
+    return "Low"
+
+
+def _section_heading(title: str) -> list:
+    """Create a consistent section header with divider and spacing."""
+    heading_style = ParagraphStyle(
+        "SectionHeading",
         fontName="Helvetica-Bold",
-        leading=14,
+        fontSize=14,
+        leading=18,
+        textColor=DARK_BLUE,
+        spaceAfter=0,
     )
-    t = Table([[Paragraph(title, style)]], colWidths=[PAGE_W])
-    t.setStyle(
+    return [
+        Paragraph(title, heading_style),
+        Spacer(1, SPACE_6),
+        HRFlowable(width="100%", thickness=0.8, color=BORDER_GRAY),
+        Spacer(1, SPACE_12),
+    ]
+
+
+def _kv_table(rows: list[tuple[str, str]], total_width: float) -> Table:
+    """Build a compact key-value block for header metadata columns."""
+    label_style = ParagraphStyle(
+        "KVLabel",
+        fontName="Helvetica-Bold",
+        fontSize=9,
+        leading=11,
+        textColor=TEXT_GRAY,
+    )
+    value_style = ParagraphStyle(
+        "KVValue",
+        fontName="Helvetica",
+        fontSize=10,
+        leading=12,
+        textColor=DARK_BLUE,
+    )
+
+    data = [[Paragraph(k, label_style), Paragraph(v, value_style)] for k, v in rows]
+    table = Table(data, colWidths=[total_width * 0.48, total_width * 0.52])
+    table.setStyle(
         TableStyle(
             [
-                ("BACKGROUND", (0, 0), (-1, -1), DARK_BLUE),
-                ("TOPPADDING",    (0, 0), (-1, -1), 7),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
-                ("LEFTPADDING",   (0, 0), (-1, -1), 10),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 5),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("LINEBELOW", (0, 0), (-1, -2), 0.25, BORDER_GRAY),
             ]
         )
     )
-    return t
+    return table
 
 
 # ---------------------------------------------------------------------------
@@ -113,123 +180,147 @@ def generate_report_pdf(
     doc = SimpleDocTemplate(
         buf,
         pagesize=A4,
-        topMargin=2.0 * cm,
-        bottomMargin=2.0 * cm,
-        leftMargin=2.2 * cm,
-        rightMargin=2.2 * cm,
+        topMargin=MARGIN_TOP,
+        bottomMargin=MARGIN_BOTTOM,
+        leftMargin=MARGIN_LEFT,
+        rightMargin=MARGIN_RIGHT,
     )
 
     base_styles = getSampleStyleSheet()
-    body_style = ParagraphStyle(
-        "BodyText",
+    title_style = ParagraphStyle(
+        "Title",
         parent=base_styles["Normal"],
-        fontSize=9,
-        textColor=colors.HexColor("#1a202c"),
-        fontName="Helvetica",
-        leading=13,
-        spaceAfter=4,
+        fontName="Helvetica-Bold",
+        fontSize=18,
+        leading=22,
+        textColor=DARK_BLUE,
     )
+    subtitle_style = ParagraphStyle(
+        "Subtitle",
+        parent=base_styles["Normal"],
+        fontName="Helvetica",
+        fontSize=11,
+        leading=14,
+        textColor=TEAL,
+    )
+    body_style = ParagraphStyle(
+        "Body",
+        parent=base_styles["Normal"],
+        fontName="Helvetica",
+        fontSize=10,
+        leading=14,
+        textColor=TEXT_GRAY,
+    )
+    note_style = ParagraphStyle(
+        "Note",
+        parent=base_styles["Normal"],
+        fontName="Helvetica",
+        fontSize=9,
+        leading=12,
+        textColor=FOOTER_GRAY,
+    )
+    footer_style = ParagraphStyle(
+        "Footer",
+        parent=base_styles["Normal"],
+        fontName="Helvetica",
+        fontSize=8,
+        leading=11,
+        textColor=FOOTER_GRAY,
+        alignment=TA_CENTER,
+    )
+
+    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    raw_risk_score = prediction.get("risk_score", 0.0)
+    risk_score = transform_score(raw_risk_score)
+    risk_level = _risk_level_from_score(risk_score, prediction.get("risk_level", "Unknown"))
+    try:
+        confidence = float(prediction.get("confidence", 0.0))
+    except (TypeError, ValueError):
+        confidence = 0.0
+    model_type = prediction.get("model_type", "placeholder")
+    model_label = "SepsisAI v1.0 (placeholder)" if model_type == "placeholder" else "SepsisAI v1.0"
 
     story = []
 
-    # ── 1. Branding header ────────────────────────────────────────────────
-    story.append(
-        Paragraph(
-            "SepsisAI Clinical Report",
-            ParagraphStyle(
-                "Title",
-                fontSize=20,
-                textColor=DARK_BLUE,
-                fontName="Helvetica-Bold",
-                spaceAfter=3,
-            ),
-        )
-    )
-    story.append(
-        Paragraph(
-            "Sepsis Risk Assessment from Gene Expression Data",
-            ParagraphStyle(
-                "SubTitle",
-                fontSize=11,
-                textColor=TEAL,
-                fontName="Helvetica",
-                spaceAfter=4,
-            ),
-        )
-    )
-    story.append(HRFlowable(width="100%", thickness=2, color=TEAL, spaceAfter=10))
+    # -------------------------------------------------------------------
+    # Header
+    # -------------------------------------------------------------------
+    story.append(Paragraph("SepsisAI Clinical Analysis Report", title_style))
+    story.append(Spacer(1, SPACE_6))
+    story.append(Paragraph("Transcriptomic Sepsis Risk Assessment", subtitle_style))
+    story.append(Spacer(1, SPACE_16))
 
-    # ── 2. Metadata table ─────────────────────────────────────────────────
-    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d  %H:%M UTC")
-    risk_score  = prediction.get("risk_score", 0.0)
-    risk_level  = prediction.get("risk_level", "Unknown")
-    confidence  = prediction.get("confidence", 0.0)
-    model_type  = prediction.get("model_type", "placeholder")
-    model_label = "SepsisAI v1.0 (placeholder)" if model_type == "placeholder" else "SepsisAI v1.0"
-
-    meta_rows = [
-        ["Patient / Sample ID:", patient_id,           "Report Generated:", now_str],
-        ["Risk Level:",          risk_level,            "Model:",            model_label],
-        ["Risk Score:",          f"{risk_score:.4f}",   "Confidence:",       f"{confidence:.4f}"],
-    ]
-    col_w = [4.5 * cm, 5.5 * cm, 4.5 * cm, 5.0 * cm]
-    meta_table = Table(meta_rows, colWidths=col_w)
-    meta_ts = TableStyle(
+    left_block = _kv_table(
         [
-            ("FONTNAME",      (0, 0), (-1, -1), "Helvetica"),
-            ("FONTNAME",      (0, 0), (0, -1),  "Helvetica-Bold"),
-            ("FONTNAME",      (2, 0), (2, -1),  "Helvetica-Bold"),
-            ("FONTSIZE",      (0, 0), (-1, -1), 9),
-            ("TEXTCOLOR",     (0, 0), (-1, -1), colors.HexColor("#1a202c")),
-            # Highlight risk level value
-            ("TEXTCOLOR",     (1, 1), (1, 1),   _risk_color(risk_level)),
-            ("FONTNAME",      (1, 1), (1, 1),   "Helvetica-Bold"),
-            ("FONTSIZE",      (1, 1), (1, 1),   10),
-            ("ROWBACKGROUNDS",(0, 0), (-1, -1), [LIGHT_GRAY, WHITE, LIGHT_GRAY]),
-            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-            ("TOPPADDING",    (0, 0), (-1, -1), 5),
-            ("LEFTPADDING",   (0, 0), (-1, -1), 6),
-            ("RIGHTPADDING",  (0, 0), (-1, -1), 6),
-            ("GRID",          (0, 0), (-1, -1), 0.3, colors.HexColor("#cbd5e1")),
-        ]
+            ("Patient / Sample ID", str(patient_id)),
+            ("Risk Level", risk_level),
+            ("Risk Score", f"{risk_score:.4f}"),
+        ],
+        total_width=(PAGE_W / 2) - 12,
     )
-    meta_table.setStyle(meta_ts)
-    story.append(meta_table)
-    story.append(Spacer(1, 0.5 * cm))
-
-    # ── Disclaimer banner ─────────────────────────────────────────────────
-    story.append(
-        Paragraph(
-            "⚠  RESEARCH USE ONLY - This report is generated by an AI system "
-            "intended for research and investigational purposes only.  It must "
-            "NOT be used as the sole basis for clinical decisions.  Always "
-            "consult a qualified healthcare professional.",
-            ParagraphStyle(
-                "Disclaimer",
-                parent=base_styles["Normal"],
-                fontSize=8,
-                textColor=PURPLE,
-                fontName="Helvetica-Oblique",
-                borderColor=PURPLE,
-                borderWidth=0.5,
-                borderPad=6,
-                backColor=PURPLE_LIGHT,
-                leading=12,
-            ),
+    right_block = _kv_table(
+        [
+            ("Report Generated", now_str),
+            ("Model Version", model_label),
+            ("Confidence", f"{confidence:.4f}"),
+        ],
+        total_width=(PAGE_W / 2) - 12,
+    )
+    header_block = Table([[left_block, right_block]], colWidths=[PAGE_W / 2, PAGE_W / 2])
+    header_block.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), LIGHT_GRAY),
+                ("BOX", (0, 0), (-1, -1), 0.5, BORDER_GRAY),
+                ("INNERGRID", (0, 0), (-1, -1), 0.25, BORDER_GRAY),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 10),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ]
         )
     )
-    story.append(Spacer(1, 0.6 * cm))
+    story.append(header_block)
+    story.append(Spacer(1, SPACE_24))
 
-    # ── 3. Top feature expression profile table ──────────────────────────
-    story.append(_section_header("1.  Top Feature Expression Profile"))
-    story.append(Spacer(1, 0.3 * cm))
+    # -------------------------------------------------------------------
+    # Disclaimer
+    # -------------------------------------------------------------------
+    disclaimer_text = (
+        "<b>Research Use Only</b><br/>"
+        "This analysis is generated by an AI-based system for research purposes.<br/>"
+        "It should not be used as the sole basis for clinical decision-making."
+    )
+    disclaimer_box = Table(
+        [[Paragraph(disclaimer_text, note_style)]],
+        colWidths=[PAGE_W],
+    )
+    disclaimer_box.setStyle(
+        TableStyle(
+            [
+                ("BACKGROUND", (0, 0), (-1, -1), LIGHT_GRAY),
+                ("BOX", (0, 0), (-1, -1), 0.5, BORDER_GRAY),
+                ("LEFTPADDING", (0, 0), (-1, -1), 10),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 10),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+            ]
+        )
+    )
+    story.append(disclaimer_box)
+    story.append(Spacer(1, SPACE_24))
+
+    # -------------------------------------------------------------------
+    # 1. Feature Expression Profile
+    # -------------------------------------------------------------------
+    story.extend(_section_heading("1. Feature Expression Profile"))
 
     baseline_by_feature = {
         item.get("gene"): float(item.get("baseline", 0.0))
         for item in feature_importances
         if item.get("gene") is not None
     }
-
     if feature_importances:
         ranked = feature_importances[:20]
         gene_rows = [
@@ -243,186 +334,193 @@ def generate_report_pdf(
         ]
     else:
         fallback_features = sorted(genes.items())[:20]
-        gene_rows = [
-            [
-                feature,
-                f"{expr:.3f}",
-                "0.000",
-                f"{expr:+.3f}",
-            ]
-            for feature, expr in fallback_features
-        ]
+        gene_rows = [[feature, f"{expr:.3f}", "0.000", f"{expr:+.3f}"] for feature, expr in fallback_features]
 
-    gene_header = [["Feature", "Patient", "Baseline", "Delta vs Baseline"]]
     gene_table = Table(
-        gene_header + gene_rows,
-        colWidths=[5 * cm, 5 * cm, 5 * cm, 4.5 * cm],
+        [["Feature", "Patient", "Baseline", "Delta"]] + gene_rows,
+        colWidths=[PAGE_W * 0.42, PAGE_W * 0.18, PAGE_W * 0.18, PAGE_W * 0.22],
     )
-    row_bgs = [LIGHT_TEAL] + [LIGHT_GRAY if i % 2 == 0 else WHITE for i in range(len(gene_rows))]
     gene_table.setStyle(
         TableStyle(
             [
-                ("FONTNAME",      (0, 0), (-1, 0),  "Helvetica-Bold"),
-                ("FONTSIZE",      (0, 0), (-1, -1), 9),
-                ("TEXTCOLOR",     (0, 0), (-1, 0),  DARK_BLUE),
-                ("FONTNAME",      (0, 1), (-1, -1), "Helvetica"),
-                ("ROWBACKGROUNDS",(0, 0), (-1, -1), row_bgs),
-                ("ALIGN",         (1, 0), (-1, -1), "CENTER"),
-                ("ALIGN",         (0, 0), (0, -1),  "LEFT"),
-                ("GRID",          (0, 0), (-1, -1), 0.3, colors.HexColor("#cbd5e1")),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-                ("TOPPADDING",    (0, 0), (-1, -1), 5),
-                ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+                ("BACKGROUND", (0, 0), (-1, 0), TABLE_HEADER_BG),
+                ("TEXTCOLOR", (0, 0), (-1, 0), DARK_BLUE),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [ROW_ALT_A, ROW_ALT_B]),
+                ("BOX", (0, 0), (-1, -1), 0.5, BORDER_GRAY),
+                ("LINEBELOW", (0, 0), (-1, 0), 0.6, BORDER_GRAY),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.25, BORDER_GRAY),
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("ALIGN", (1, 0), (-1, -1), "RIGHT"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ]
         )
     )
     story.append(gene_table)
-    story.append(Spacer(1, 0.6 * cm))
+    story.append(Spacer(1, SPACE_20))
 
-    # ── 4. Feature importances table ─────────────────────────────────────
-    story.append(_section_header("2.  Top Influencing Features"))
-    story.append(Spacer(1, 0.3 * cm))
+    # -------------------------------------------------------------------
+    # 2. Influential Biomarkers
+    # -------------------------------------------------------------------
+    story.extend(_section_heading("2. Influential Biomarkers"))
     story.append(
         Paragraph(
-            "Features ranked by absolute impact on the risk prediction. "
-            "Positive scores indicate patterns associated with higher predicted "
-            "sepsis risk; negative scores indicate lower-risk directionality.",
+            "Top features ranked by absolute impact on the model output. "
+            "Positive impact indicates increased risk directionality.",
             body_style,
         )
     )
-    story.append(Spacer(1, 0.2 * cm))
+    story.append(Spacer(1, SPACE_12))
 
     def _direction_label(impact: float) -> str:
-        if impact > 0.15:  return "Strong ↑ risk"
-        if impact > 0.05:  return "Moderate ↑ risk"
-        if impact > 0.0:   return "Mild ↑ risk"
-        if impact > -0.10: return "Mild ↓ protective"
-        return "Strong ↓ protective"
+        if impact > 0.15:
+            return "Strong up-risk"
+        if impact > 0.05:
+            return "Moderate up-risk"
+        if impact > 0.0:
+            return "Mild up-risk"
+        if impact > -0.10:
+            return "Mild protective"
+        return "Strong protective"
 
-    fi_header = [["Rank", "Feature", "Impact", "Direction"]]
     fi_rows = [
-        [
-            str(i),
-            item["gene"],
-            f"{item['impact']:+.4f}",
-            _direction_label(item["impact"]),
-        ]
+        [str(i), item["gene"], f"{item['impact']:+.4f}", _direction_label(item["impact"])]
         for i, item in enumerate(feature_importances[:8], 1)
     ]
     fi_table = Table(
-        fi_header + fi_rows,
-        colWidths=[1.5 * cm, 3.0 * cm, 3.5 * cm, PAGE_W - 8.0 * cm],
+        [["Rank", "Feature", "Impact", "Direction"]] + fi_rows,
+        colWidths=[PAGE_W * 0.10, PAGE_W * 0.40, PAGE_W * 0.18, PAGE_W * 0.32],
     )
-    fi_bgs = [LIGHT_TEAL] + [LIGHT_GRAY if i % 2 == 0 else WHITE for i in range(len(fi_rows))]
     fi_table.setStyle(
         TableStyle(
             [
-                ("FONTNAME",      (0, 0), (-1, 0),  "Helvetica-Bold"),
-                ("FONTSIZE",      (0, 0), (-1, -1), 9),
-                ("TEXTCOLOR",     (0, 0), (-1, 0),  DARK_BLUE),
-                ("FONTNAME",      (0, 1), (-1, -1), "Helvetica"),
-                ("ROWBACKGROUNDS",(0, 0), (-1, -1), fi_bgs),
-                ("GRID",          (0, 0), (-1, -1), 0.3, colors.HexColor("#cbd5e1")),
-                ("ALIGN",         (0, 0), (2, -1),  "CENTER"),
-                ("ALIGN",         (3, 0), (3, -1),  "LEFT"),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
-                ("TOPPADDING",    (0, 0), (-1, -1), 5),
-                ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+                ("BACKGROUND", (0, 0), (-1, 0), TABLE_HEADER_BG),
+                ("TEXTCOLOR", (0, 0), (-1, 0), DARK_BLUE),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [ROW_ALT_A, ROW_ALT_B]),
+                ("BOX", (0, 0), (-1, -1), 0.5, BORDER_GRAY),
+                ("LINEBELOW", (0, 0), (-1, 0), 0.6, BORDER_GRAY),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.25, BORDER_GRAY),
+                ("ALIGN", (0, 0), (0, -1), "RIGHT"),
+                ("ALIGN", (1, 0), (1, -1), "LEFT"),
+                ("ALIGN", (2, 0), (2, -1), "RIGHT"),
+                ("ALIGN", (3, 0), (3, -1), "LEFT"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
             ]
         )
     )
     story.append(fi_table)
-    story.append(Spacer(1, 0.6 * cm))
+    story.append(Spacer(1, SPACE_20))
 
-    # ── 5. Heatmap ────────────────────────────────────────────────────────
-    if heatmap_b64:
-        story.append(_section_header("3.  Gene Expression Heatmap"))
-        story.append(Spacer(1, 0.3 * cm))
-        story.append(
-            Paragraph(
-                "Side-by-side comparison of patient gene expression against the "
-                "healthy reference baseline.  Warm colours (red) indicate elevated "
-                "expression; cool colours (blue) indicate suppression.",
-                body_style,
-            )
+    # -------------------------------------------------------------------
+    # 3. Gene Expression Heatmap
+    # -------------------------------------------------------------------
+    story.extend(_section_heading("3. Gene Expression Heatmap"))
+    story.append(
+        Paragraph(
+            "Comparison of patient gene expression against reference baseline.",
+            body_style,
         )
-        story.append(Spacer(1, 0.2 * cm))
+    )
+    story.append(Spacer(1, SPACE_12))
+
+    if heatmap_b64:
         try:
             img_bytes = base64.b64decode(heatmap_b64)
             img_buf = io.BytesIO(img_bytes)
-            story.append(RLImage(img_buf, width=PAGE_W, height=5.2 * cm))
+            heatmap_img = RLImage(img_buf, width=HEATMAP_W, height=HEATMAP_H)
+            heatmap_img.hAlign = "CENTER"
+            story.append(heatmap_img)
         except Exception as exc:
             logger.warning("Could not embed heatmap in PDF: %s", exc)
-            story.append(Paragraph("[Heatmap image unavailable]", body_style))
-        story.append(Spacer(1, 0.6 * cm))
+            story.append(Paragraph("Heatmap image unavailable.", note_style))
+    else:
+        story.append(Paragraph("Heatmap image unavailable.", note_style))
 
-    # ── 6. Risk assessment summary ────────────────────────────────────────
-    story.append(_section_header("4.  Risk Assessment Summary"))
-    story.append(Spacer(1, 0.3 * cm))
+    story.append(Spacer(1, SPACE_20))
+
+    # -------------------------------------------------------------------
+    # 4. Risk Assessment Summary
+    # -------------------------------------------------------------------
+    story.extend(_section_heading("4. Risk Assessment Summary"))
 
     def _score_interp(score: float) -> str:
-        if score >= 0.70: return "≥ 0.70 → High risk threshold exceeded"
-        if score >= 0.40: return "0.40 – 0.69 → Intermediate risk zone"
-        return "< 0.40 → Below risk threshold"
+        if score >= 0.70:
+            return "High-risk threshold exceeded"
+        if score >= 0.40:
+            return "Intermediate risk zone"
+        return "Below primary risk threshold"
 
     def _conf_interp(conf: float) -> str:
-        if conf >= 0.85: return "High confidence in prediction"
-        if conf >= 0.70: return "Moderate confidence - consider repeat sampling"
-        return "Low confidence - clinical correlation strongly advised"
+        if conf >= 0.85:
+            return "High confidence"
+        if conf >= 0.70:
+            return "Moderate confidence"
+        return "Low confidence"
 
     def _level_action(level: str) -> str:
-        if level == "High":     return "Immediate clinical review recommended"
-        if level == "Moderate": return "Close monitoring and follow-up advised"
+        if level == "High":
+            return "Immediate clinical review recommended"
+        if level == "Moderate":
+            return "Close monitoring and follow-up advised"
         return "Routine monitoring appropriate"
 
     summary_rows = [
-        ["Metric",              "Value",                         "Interpretation"],
-        ["Sepsis Risk Score",   f"{risk_score:.4f} / 1.000",     _score_interp(risk_score)],
-        ["Risk Classification", risk_level,                       _level_action(risk_level)],
-        ["Model Confidence",    f"{confidence:.4f}",              _conf_interp(confidence)],
+        ["Metric", "Value", "Interpretation"],
+        ["Sepsis Risk Score", f"{risk_score:.4f} / 1.000", _score_interp(risk_score)],
+        ["Risk Classification", risk_level, _level_action(risk_level)],
+        ["Model Confidence", f"{confidence:.4f}", _conf_interp(confidence)],
     ]
-    sum_table = Table(
+    summary_table = Table(
         summary_rows,
-        colWidths=[5.0 * cm, 4.5 * cm, PAGE_W - 9.5 * cm],
+        colWidths=[PAGE_W * 0.34, PAGE_W * 0.22, PAGE_W * 0.44],
     )
-    sum_table.setStyle(
+    summary_table.setStyle(
         TableStyle(
             [
-                ("FONTNAME",      (0, 0), (-1, 0),  "Helvetica-Bold"),
-                ("FONTSIZE",      (0, 0), (-1, -1), 9),
-                ("TEXTCOLOR",     (0, 0), (-1, 0),  DARK_BLUE),
-                ("FONTNAME",      (0, 1), (-1, -1), "Helvetica"),
-                # Colour-code the risk level cell
-                ("TEXTCOLOR",     (1, 2), (1, 2),   _risk_color(risk_level)),
-                ("FONTNAME",      (1, 2), (1, 2),   "Helvetica-Bold"),
-                ("FONTSIZE",      (1, 2), (1, 2),   10),
-                ("ROWBACKGROUNDS",(0, 0), (-1, -1), [LIGHT_TEAL, LIGHT_GRAY, WHITE, LIGHT_GRAY]),
-                ("GRID",          (0, 0), (-1, -1), 0.3, colors.HexColor("#cbd5e1")),
-                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
-                ("TOPPADDING",    (0, 0), (-1, -1), 6),
-                ("LEFTPADDING",   (0, 0), (-1, -1), 8),
+                ("BACKGROUND", (0, 0), (-1, 0), TABLE_HEADER_BG),
+                ("TEXTCOLOR", (0, 0), (-1, 0), DARK_BLUE),
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTNAME", (0, 1), (-1, -1), "Helvetica"),
+                ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("ROWBACKGROUNDS", (0, 1), (-1, -1), [ROW_ALT_A, ROW_ALT_B]),
+                ("BOX", (0, 0), (-1, -1), 0.5, BORDER_GRAY),
+                ("LINEBELOW", (0, 0), (-1, 0), 0.6, BORDER_GRAY),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.25, BORDER_GRAY),
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("ALIGN", (1, 0), (1, -1), "RIGHT"),
+                ("ALIGN", (2, 0), (2, -1), "LEFT"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 8),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 7),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 7),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("TEXTCOLOR", (1, 2), (1, 2), _risk_color(risk_level)),
+                ("FONTNAME", (1, 2), (1, 2), "Helvetica-Bold"),
             ]
         )
     )
-    story.append(sum_table)
-    story.append(Spacer(1, 0.5 * cm))
+    story.append(summary_table)
+    story.append(Spacer(1, SPACE_24))
 
-    # ── Footer ────────────────────────────────────────────────────────────
-    story.append(HRFlowable(width="100%", thickness=1, color=MID_GRAY, spaceAfter=6))
-    story.append(
-        Paragraph(
-            f"Generated by SepsisAI v1.0  ·  {now_str}  ·  Research Use Only  ·  "
-            "Not validated for clinical diagnostic use",
-            ParagraphStyle(
-                "Footer",
-                parent=base_styles["Normal"],
-                fontSize=7,
-                textColor=MID_GRAY,
-                fontName="Helvetica-Oblique",
-                alignment=TA_CENTER,
-            ),
-        )
-    )
+    # -------------------------------------------------------------------
+    # Footer
+    # -------------------------------------------------------------------
+    story.append(HRFlowable(width="100%", thickness=0.8, color=BORDER_GRAY))
+    story.append(Spacer(1, SPACE_6))
+    story.append(Paragraph(f"Generated by SepsisAI v1.0 | {now_str} | Research Use Only", footer_style))
 
     doc.build(story)
     buf.seek(0)

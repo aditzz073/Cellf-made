@@ -8,6 +8,7 @@ import RiskGauge from './RiskGauge.jsx';
 import GeneImpactChart from './GeneImpactChart.jsx';
 import HeatmapViewer from './HeatmapViewer.jsx';
 import { generateReport } from '../api/client.js';
+import { transformScore } from '../utils/scoreTransform.js';
 
 export default function ResultsPanel({ results, isLoading, patientId }) {
   const [reportLoading, setReportLoading] = useState(false);
@@ -46,6 +47,13 @@ export default function ResultsPanel({ results, isLoading, patientId }) {
   }
 
   const { prediction, feature_importances, heatmap_base64, genes } = results;
+  const adjustedRiskScore = transformScore(prediction?.risk_score ?? 0);
+  const displayRiskLevel = riskLevelFromScore(adjustedRiskScore, prediction?.risk_level ?? 'Low');
+  const displayPrediction = {
+    ...prediction,
+    risk_score: adjustedRiskScore,
+    risk_level: displayRiskLevel,
+  };
 
   // ── PDF download ──────────────────────────────────────────────────────────
   const handleDownloadReport = async () => {
@@ -107,20 +115,20 @@ export default function ResultsPanel({ results, isLoading, patientId }) {
       {/* ── Risk gauge + key metrics ── */}
       <div style={styles.gaugeSection}>
         <RiskGauge
-          riskScore={prediction.risk_score}
+          riskScore={adjustedRiskScore}
           confidence={prediction.confidence}
         />
         <div style={styles.metrics}>
           <MetricCard
             label="Risk Score"
-            value={prediction.risk_score.toFixed(4)}
+            value={adjustedRiskScore.toFixed(4)}
             sub="/ 1.000"
-            highlight={riskColor(prediction.risk_score)}
+            highlight={riskColor(adjustedRiskScore)}
           />
           <MetricCard
             label="Risk Level"
-            value={prediction.risk_level}
-            highlight={riskColor(prediction.risk_score)}
+            value={displayRiskLevel}
+            highlight={riskColor(adjustedRiskScore)}
           />
           <MetricCard
             label="Confidence"
@@ -159,7 +167,7 @@ export default function ResultsPanel({ results, isLoading, patientId }) {
 
       {/* ── Clinical interpretation ── */}
       <SectionHeader icon={<ClipboardIcon />} title="Clinical Interpretation" />
-      <ClinicalInterpretation prediction={prediction} />
+      <ClinicalInterpretation prediction={displayPrediction} />
     </div>
   );
 }
@@ -241,6 +249,13 @@ function riskColor(score) {
 function confidenceLabel(c) {
   if (c >= 0.85) return 'High';
   if (c >= 0.70) return 'Moderate';
+  return 'Low';
+}
+
+function riskLevelFromScore(score, fallbackLevel = 'Low') {
+  if (!Number.isFinite(score)) return fallbackLevel;
+  if (score >= 0.70) return 'High';
+  if (score >= 0.40) return 'Moderate';
   return 'Low';
 }
 

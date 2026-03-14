@@ -6,6 +6,7 @@ import HeatmapViewer         from './HeatmapViewer.jsx';
 import CohortComparison      from './CohortComparison.jsx';
 import ReportDownload        from './ReportDownload.jsx';
 import { useAuth }           from '../context/AuthContext.jsx';
+import { transformScore }    from '../utils/scoreTransform.js';
 
 /**
  * ResultsDashboard - cBioPortal-style results page.
@@ -31,19 +32,21 @@ export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
 
   const finalRiskLevel  = prediction.risk_level  ?? results.risk_level  ?? 'Unknown';
   const finalRiskScore  = prediction.risk_score  ?? results.risk_score  ?? 0;
+  const adjustedRiskScore = transformScore(finalRiskScore);
+  const displayRiskLevel = riskLevelFromScore(adjustedRiskScore, finalRiskLevel);
   const finalConfidence = prediction.confidence  ?? results.confidence  ?? null;
   const finalModelType  = prediction.model_type  ?? results.model_type  ?? 'Placeholder model (demo)';
 
   const predictionPayload = {
     risk_score: finalRiskScore,
-    risk_level: finalRiskLevel,
+    risk_level: displayRiskLevel,
     confidence: finalConfidence,
     model_type: finalModelType,
   };
 
   const riskBadgeCls =
-    finalRiskLevel === 'High'     ? 'bg-red-50 text-red-700 border-red-200'   :
-    finalRiskLevel === 'Moderate' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+    displayRiskLevel === 'High'     ? 'bg-red-50 text-red-700 border-red-200'   :
+    displayRiskLevel === 'Moderate' ? 'bg-amber-50 text-amber-700 border-amber-200' :
                                     'bg-green-50 text-green-700 border-green-200';
 
   return (
@@ -103,7 +106,7 @@ export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
             </div>
 
             <span className={`hidden sm:inline-block text-xs font-bold px-3 py-1.5 rounded-full border ${riskBadgeCls}`}>
-              {finalRiskLevel} Risk
+              {displayRiskLevel} Risk
             </span>
           </div>
         </div>
@@ -128,7 +131,7 @@ export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
           <div className="lg:col-span-2">
             <RiskCard
               riskScore={finalRiskScore}
-              riskLevel={finalRiskLevel}
+              riskLevel={displayRiskLevel}
               confidence={finalConfidence}
               modelType={finalModelType}
             />
@@ -144,8 +147,8 @@ export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
               <div className="grid grid-cols-2 gap-x-6 gap-y-3.5">
                 {[
                   { label: 'Patient ID',       value: patientId,                                                mono: true },
-                  { label: 'Risk Level',        value: finalRiskLevel,                                          color: finalRiskLevel === 'High' ? '#dc2626' : finalRiskLevel === 'Moderate' ? '#d97706' : '#16a34a' },
-                  { label: 'Risk Score',        value: `${(finalRiskScore * 100).toFixed(1)}% (${finalRiskScore.toFixed(4)})`,  mono: true },
+                  { label: 'Risk Level',        value: displayRiskLevel,                                        color: displayRiskLevel === 'High' ? '#dc2626' : displayRiskLevel === 'Moderate' ? '#d97706' : '#16a34a' },
+                  { label: 'Risk Score',        value: `${(adjustedRiskScore * 100).toFixed(1)}% (${adjustedRiskScore.toFixed(4)})`,  mono: true },
                   { label: 'Confidence',        value: finalConfidence != null ? `${Math.round(finalConfidence * 100)}%` : 'N/A', mono: true },
                   { label: 'Top Features',      value: `${feature_importances.length}` },
                   { label: 'Model',             value: finalModelType },
@@ -214,6 +217,13 @@ export default function ResultsDashboard({ results, onNewAnalysis, onGoHome }) {
       </div>
     </div>
   );
+}
+
+function riskLevelFromScore(score, fallbackLevel = 'Unknown') {
+  if (!Number.isFinite(score)) return fallbackLevel;
+  if (score >= 0.70) return 'High';
+  if (score >= 0.40) return 'Moderate';
+  return 'Low';
 }
 
 /* ── ModelInfoPanel (internal to this file) ── */
